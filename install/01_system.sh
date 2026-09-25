@@ -9,7 +9,7 @@ sudo apt-get update -y
 CORE_PKGS=(
   build-essential curl wget git jq unzip zip fontconfig
   flatpak libglib2.0-bin dconf-cli zenity xdg-utils
-  ca-certificates gnupg xterm
+  ca-certificates gnupg xterm openssh-server
 )
 # mise builds Python from source; these are its documented build dependencies.
 PYTHON_BUILD_PKGS=(
