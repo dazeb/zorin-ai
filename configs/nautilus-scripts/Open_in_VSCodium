@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Nautilus right-click → Scripts → Open in VSCodium
+# Nautilus passes the selection via env vars (newline-separated paths), not argv.
+args=()
+while IFS= read -r f; do
+  [ -n "$f" ] && args+=("$f")
+done <<EOF
+${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS:-}
+EOF
+
+if [ ${#args[@]} -eq 0 ]; then
+  args=("${NAUTILUS_SCRIPT_CURRENT_DIR:-$HOME}")
+fi
+
+if ! command -v codium >/dev/null 2>&1; then
+  notify-send "zorin-ai" "VSCodium is not installed" 2>/dev/null || true
+  exit 1
+fi
+
+codium "${args[@]}" >/dev/null 2>&1 &

@@ -1,0 +1,7 @@
+# One extension id per line; '#' starts a comment.
+# VSCodium resolves these from Open VSX.
+continue.continue
+eamodio.gitlens
+esbenp.prettier-vscode
+ms-python.python
+golang.go

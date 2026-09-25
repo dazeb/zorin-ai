@@ -1,0 +1,20 @@
+# Continue.dev — wired to the local Ollama daemon by zorin-ai.
+# Endpoint: http://localhost:11434 (installed by install/03_ai_core.sh)
+name: zorin-ai Local Assistant
+version: 1.0.0
+schema: v1
+models:
+  - name: Qwen2.5 Coder (local)
+    provider: ollama
+    model: qwen2.5-coder:7b
+    apiBase: http://localhost:11434
+    roles:
+      - chat
+      - edit
+      - apply
+  - name: Qwen2.5 Coder Autocomplete (local)
+    provider: ollama
+    model: qwen2.5-coder:7b
+    apiBase: http://localhost:11434
+    roles:
+      - autocomplete

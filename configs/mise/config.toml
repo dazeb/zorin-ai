@@ -1,0 +1,12 @@
+# zorin-ai default toolchain — system-wide baseline for all users.
+# Managed by the zorin-ai provisioner; user-level overrides go in
+# ~/.config/mise/config.toml.
+
+[tools]
+node = "lts"
+python = "3.12"
+go = "latest"
+
+[settings]
+experimental = true
+legacy_version_file = true

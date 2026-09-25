@@ -1,0 +1,25 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+
+      - name: Syntax + shellcheck (warning severity)
+        run: |
+          fail=0
+          for f in boot.sh install.sh install/*.sh bin/zom bin/zom-menu configs/nautilus-scripts/*; do
+            [ -f "$f" ] || continue
+            bash -n "$f" || fail=1
+            shellcheck --severity=warning "$f" || fail=1
+          done
+          exit $fail

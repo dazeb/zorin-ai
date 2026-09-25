@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Nautilus right-click → Scripts → Open Terminal Here
+dir="${NAUTILUS_SCRIPT_CURRENT_DIR:-$HOME}"
+
+# If the user selected a file/folder, open the terminal in that folder.
+sel="$(head -n 1 <<<"${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS:-}")"
+if [ -n "$sel" ]; then
+  [ -f "$sel" ] && sel="$(dirname "$sel")"
+  [ -d "$sel" ] && dir="$sel"
+fi
+
+if command -v gnome-terminal >/dev/null 2>&1; then
+  gnome-terminal --working-directory="$dir" >/dev/null 2>&1
+elif command -v x-terminal-emulator >/dev/null 2>&1; then
+  (cd "$dir" && x-terminal-emulator >/dev/null 2>&1)
+fi

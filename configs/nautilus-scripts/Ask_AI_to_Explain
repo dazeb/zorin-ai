@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Nautilus right-click → Scripts → Ask AI to Explain
+# Sends the file to the local Ollama daemon and shows the summary in a GTK dialog.
+set -u
+
+OLLAMA_URL="${ZORIN_AI_OLLAMA_URL:-http://localhost:11434}"
+MODEL="${ZORIN_AI_MODEL:-qwen2.5-coder:7b}"
+
+file="$(head -n 1 <<<"${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS:-}")"
+if [ -z "$file" ]; then
+  notify-send "Ask AI to Explain" "No file selected" 2>/dev/null || true
+  exit 0
+fi
+if [ -d "$file" ]; then
+  notify-send "Ask AI to Explain" "Pick a file, not a folder" 2>/dev/null || true
+  exit 0
+fi
+if [ ! -r "$file" ]; then
+  notify-send "Ask AI to Explain" "Cannot read: $file" 2>/dev/null || true
+  exit 1
+fi
+
+# First 200 lines, JSON-escaped by jq (--rawfile needs jq >= 1.6, shipped on Ubuntu 22.04+).
+prompt="Explain what this file does in plain English. Be concise and practical."
+payload="$(jq -n --arg m "$MODEL" --arg p "$prompt" --rawfile c "$file" \
+  '{model: $m, prompt: ($p + "\n\n" + $c), stream: false}')"
+
+response="$(curl -s --max-time 300 "$OLLAMA_URL/api/generate" -d "$payload" \
+  | jq -r '.response // (.error | if type == "object" then .message else . end) // "No response from Ollama — is it running?"' 2>/dev/null)"
+
+zenity --info \
+  --title="AI File Summary — $(basename "$file")" \
+  --width=640 --height=480 \
+  --text="${response:0:4000}"

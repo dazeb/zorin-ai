@@ -1,0 +1,162 @@
+#!/usr/bin/env bash
+# zom — zorin-ai workstation management CLI.
+#   zom update        apt + Flatpak + mise runtimes + AI models
+#   zom doctor        health check of the whole stack
+#   zom models        list | pull <model> | rm <model> | gui
+set -uo pipefail
+
+VERSION="0.1.0"
+OLLAMA_URL="http://127.0.0.1:11434"
+MODEL_PRESETS=("qwen2.5-coder:7b" "qwen2.5-coder:14b" "llama3.2:3b" "gemma2:2b" "deepseek-coder:6.7b" "phi4-mini")
+
+ok()   { printf '  \033[32mOK\033[0m  %s\n' "$*"; }
+bad()  { printf '  \033[31m!!\033[0m  %s\n' "$*"; }
+info() { printf '\033[1;36mzom\033[0m %s\n' "$*"; }
+
+cmd_update() {
+  info "1/4  apt packages"
+  sudo apt-get update
+  sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+
+  info "2/4  Flatpak applications"
+  if command -v flatpak >/dev/null 2>&1; then
+    flatpak update -y --noninteractive 2>/dev/null \
+      || sudo flatpak update -y --noninteractive || true
+  fi
+
+  info "3/4  mise runtimes"
+  if command -v mise >/dev/null 2>&1; then
+    mise up -y 2>/dev/null || mise install || true
+  else
+    bad "mise not found"
+  fi
+
+  info "4/4  Ollama models (refresh every installed model)"
+  if command -v ollama >/dev/null 2>&1 \
+     && curl -fsS --max-time 5 "$OLLAMA_URL/api/tags" >/dev/null 2>&1; then
+    while IFS= read -r m; do
+      [ -z "$m" ] && continue
+      info "     pulling $m"
+      ollama pull "$m" || bad "pull failed: $m"
+    done < <(ollama list 2>/dev/null | awk 'NR>1 {print $1}')
+  else
+    bad "Ollama not responding — skipped model refresh"
+  fi
+
+  info "Update complete."
+}
+
+cmd_doctor() {
+  echo "zorin-ai doctor"
+  echo "----------------"
+
+  if [ -r /etc/os-release ]; then
+    # shellcheck source=/dev/null
+    . /etc/os-release
+    ok "OS: ${PRETTY_NAME:-$ID}"
+  else
+    bad "OS: unknown"
+  fi
+
+  if curl -fsS --max-time 5 "$OLLAMA_URL/api/version" >/dev/null 2>&1; then
+    ok "Ollama: running ($(curl -fsS "$OLLAMA_URL/api/version" | jq -r .version 2>/dev/null))"
+    model_count="$(curl -fsS "$OLLAMA_URL/api/tags" | jq '.models | length' 2>/dev/null || echo 0)"
+    ok "Ollama: $model_count local model(s)"
+  else
+    bad "Ollama: not responding on $OLLAMA_URL (try: systemctl status ollama)"
+  fi
+
+  if command -v mise >/dev/null 2>&1; then
+    ok "mise: $(mise --version 2>/dev/null | head -n 1)"
+    mise ls 2>/dev/null | sed 's/^/       /' || true
+    node_v="$(mise exec -- node --version 2>/dev/null || true)"
+    py_v="$(mise exec -- python --version 2>/dev/null || true)"
+    go_v="$(mise exec -- go version 2>/dev/null | awk '{print $3}' || true)"
+    [ -n "$node_v" ] && ok "node $node_v (mise)"   || bad "node: not resolving via mise"
+    [ -n "$py_v" ]   && ok "$py_v (mise)"          || bad "python: not resolving via mise"
+    [ -n "$go_v" ]   && ok "go $go_v (mise)"       || bad "go: not resolving via mise"
+  else
+    bad "mise: not installed"
+  fi
+
+  if command -v codium >/dev/null 2>&1; then
+    ok "VSCodium: $(codium --version 2>/dev/null | head -n 1)"
+  else
+    bad "VSCodium: missing"
+  fi
+
+  if command -v flatpak >/dev/null 2>&1; then
+    flatpak list --app 2>/dev/null | grep -q MissionCenter \
+      && ok "Mission Center: installed" || bad "Mission Center: missing"
+  fi
+
+  if dpkg-query -W -f='${Status}' chatbox 2>/dev/null | grep -q 'install ok installed' \
+     || dpkg-query -W -f='${Status}' xyz.chatboxapp.app 2>/dev/null | grep -q 'install ok installed'; then
+    ok "Chatbox: installed"
+  else
+    bad "Chatbox: missing"
+  fi
+
+  if command -v nvidia-smi >/dev/null 2>&1; then
+    ok "GPU: NVIDIA $(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -n 1)"
+  else
+    info "GPU: no NVIDIA driver detected — Ollama will run on CPU"
+  fi
+
+  ok "Disk free on /: $(df -h / | awk 'NR==2 {print $4}')"
+  echo "----------------"
+  echo "done."
+}
+
+cmd_models() {
+  local action="${1:-list}"
+  case "$action" in
+    list)
+      ollama list
+      ;;
+    pull)
+      local m="${2:-}"
+      [ -z "$m" ] && { echo "usage: zom models pull <model>"; exit 1; }
+      ollama pull "$m"
+      ;;
+    rm|remove|delete)
+      local m="${2:-}"
+      [ -z "$m" ] && { echo "usage: zom models rm <model>"; exit 1; }
+      ollama rm "$m"
+      ;;
+    gui)
+      command -v zenity >/dev/null 2>&1 || { bad "zenity not available"; exit 1; }
+      local choice
+      choice="$(zenity --list \
+        --title="zorin-ai — download a model" \
+        --text="Pick a model to pull from the Ollama library" \
+        --column="Model" --column="Note" \
+        "${MODEL_PRESETS[0]}" "Default: fast local coding model" \
+        "${MODEL_PRESETS[1]}" "Bigger, smarter (needs ~16 GB RAM)" \
+        "${MODEL_PRESETS[2]}" "Small general chat" \
+        "${MODEL_PRESETS[3]}" "Tiny general chat" \
+        "${MODEL_PRESETS[4]}" "Alternative coding model" \
+        "${MODEL_PRESETS[5]}" "Small, fast model" \
+        --width=520 --height=400 2>/dev/null)" || exit 0
+      [ -n "$choice" ] && ollama pull "$choice"
+      ;;
+    *)
+      echo "usage: zom models [list | pull <model> | rm <model> | gui]"
+      ;;
+  esac
+}
+
+case "${1:-help}" in
+  update) cmd_update ;;
+  doctor) cmd_doctor ;;
+  models) shift; cmd_models "$@" ;;
+  --version|-v) echo "zom $VERSION" ;;
+  *)
+    echo "zom $VERSION — zorin-ai workstation manager"
+    echo ""
+    echo "  zom update      update apt, Flatpak apps, mise runtimes, AI models"
+    echo "  zom doctor      health check of the whole stack"
+    echo "  zom models      manage local AI models (list | pull | rm | gui)"
+    echo "  zom-menu        the same maintenance tasks from a GUI panel"
+    ;;
+esac

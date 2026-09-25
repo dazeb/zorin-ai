@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Module 01: system base — apt packages, Flathub, Nerd Fonts.
+set -Eeuo pipefail
+source "$REPO_ROOT/install/lib.sh"
+
+log "Updating apt package index..."
+sudo apt-get update -y
+
+CORE_PKGS=(
+  build-essential curl wget git jq unzip zip fontconfig
+  flatpak libglib2.0-bin dconf-cli zenity xdg-utils
+  ca-certificates gnupg
+)
+# mise builds Python from source; these are its documented build dependencies.
+PYTHON_BUILD_PKGS=(
+  libssl-dev zlib1g-dev libbz2-dev libreadline-dev
+  libsqlite3-dev libffi-dev liblzma-dev
+)
+log "Installing core packages: ${CORE_PKGS[*]} ${PYTHON_BUILD_PKGS[*]}"
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${CORE_PKGS[@]}" "${PYTHON_BUILD_PKGS[@]}"
+
+# Optional packages whose names vary across Zorin/Ubuntu releases.
+for p in nautilus gnome-terminal nautilus-extension-gnome-terminal; do
+  if apt-cache show "$p" >/dev/null 2>&1; then
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$p" \
+      || warn "Optional package failed to install: $p"
+  else
+    warn "Optional package not available in this release (skipped): $p"
+  fi
+done
+
+if sudo flatpak remotes 2>/dev/null | grep -qw flathub; then
+  log "OK: Flathub remote already registered"
+else
+  log "Registering Flathub remote..."
+  sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+fi
+
+FONT_DIR="/usr/local/share/fonts/JetBrainsMono"
+if fc-list 2>/dev/null | grep -qi "JetBrainsMono Nerd Font"; then
+  log "OK: JetBrainsMono Nerd Font already installed"
+else
+  log "Downloading JetBrainsMono Nerd Font..."
+  tmp_dir="$(mktemp -d)"
+  curl -fsSL -o "$tmp_dir/JetBrainsMono.tar.xz" \
+    "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz"
+  sudo mkdir -p "$FONT_DIR"
+  sudo tar -xJf "$tmp_dir/JetBrainsMono.tar.xz" -C "$FONT_DIR"
+  sudo fc-cache -f "$FONT_DIR" >/dev/null
+  rm -rf "$tmp_dir"
+  log "Installed JetBrainsMono Nerd Font to $FONT_DIR"
+fi
+
+log "System base complete."

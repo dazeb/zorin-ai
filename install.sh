@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# zorin-ai — main orchestrator.
+# Run as your normal desktop user; sudo is used internally for system changes.
+set -Eeuo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_FILE="${ZORIN_AI_LOG:-/tmp/zorin-ai-install-$(date +%Y%m%d-%H%M%S).log}"
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+# ---- resolve the target desktop user -----------------------------------------
+if [ "$(id -u)" -eq 0 ]; then
+  TARGET_USER="${SUDO_USER:-}"
+  if [ -z "$TARGET_USER" ] || [ "$TARGET_USER" = "root" ]; then
+    echo "ERROR: do not run as bare root. Run as your normal desktop user: bash install.sh" >&2
+    exit 1
+  fi
+else
+  TARGET_USER="$(id -un)"
+fi
+TARGET_UID="$(id -u "$TARGET_USER")"
+TARGET_HOME="$(getent passwd "$TARGET_USER" | cut -d: -f6)"
+export REPO_ROOT TARGET_USER TARGET_UID TARGET_HOME
+
+# shellcheck source=install/lib.sh
+source "$REPO_ROOT/install/lib.sh"
+
+# ---- flags ---------------------------------------------------------------------
+SKIP_AI=0
+SKIP_GUI=0
+for arg in "$@"; do
+  case "$arg" in
+    --skip-ai)  SKIP_AI=1 ;;
+    --skip-gui) SKIP_GUI=1 ;;
+    *) die "Unknown option: $arg (supported: --skip-ai --skip-gui)" ;;
+  esac
+done
+
+echo "======================================================"
+echo "  zorin-ai :: mouse-first AI developer workstation"
+echo "======================================================"
+log "Log file: $LOG_FILE"
+log "Target user: $TARGET_USER ($TARGET_HOME)"
+
+run_module() {
+  log "───────────────────── $1 ─────────────────────"
+  bash "$REPO_ROOT/install/$1"
+}
+
+run_module 00_preflight.sh
+run_module 01_system.sh
+run_module 02_mise.sh
+
+if [ "$SKIP_AI" -eq 1 ]; then
+  log "SKIP 03_ai_core (--skip-ai)"
+else
+  run_module 03_ai_core.sh
+fi
+
+if [ "$SKIP_GUI" -eq 1 ]; then
+  log "SKIP 04/05/06 (--skip-gui)"
+else
+  run_module 04_gui_apps.sh
+  run_module 05_mouse_ergonomics.sh
+  run_module 06_desktop_theme.sh
+fi
+
+run_module 07_persistence.sh
+
+log "✔ Install complete. Full log: $LOG_FILE"
+log "Try it: right-click a file in Files → Scripts → 'Ask AI to Explain'."
+log "Health check anytime with: zom doctor"
