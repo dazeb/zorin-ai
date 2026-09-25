@@ -248,10 +248,19 @@ Each module: **objective → actions → idempotence guard → acceptance check.
   (button-layout, prefer-dark, ZorinBlue-Dark, favorites), Nautilus scripts installed
   and executable, fresh-user `/etc/skel` test passed. Findings folded back as fixes
   (§9 items 10–14).
-- **M3 — fresh-user + GUI acceptance:** skel test done in M2; remaining: interactive
-  GUI checks on the desktop (right-click menus, Continue chat, Chatbox wizard) —
-  can be done by hand on the running VM.
-- **M4 — polish & release:** real bootstrap URL, branding assets, tag `v0.1`.
+- **M3 — fresh-user + GUI acceptance:** fresh-user `/etc/skel` test done in M2.
+  Remaining: interactive desktop walkthrough (right-click menus, Continue chat,
+  Chatbox wizard, Mission Center) — best done by hand on the running VM
+  (`192.168.8.124`); remote VNC automation is blocked while the Proxmox web console
+  holds the VM's single VNC client slot.
+- **M4 — polish & release:** *(done 2026-09-25)* — live at
+  [github.com/dazeb/zorin-ai](https://github.com/dazeb/zorin-ai); real bootstrap URL
+  in `boot.sh`/README; CI workflow committed (`.github/workflows/ci.yml`,
+  bash -n + shellcheck at warning severity; **note:** GitHub Actions is disabled at
+  the account level, so runs won't start until re-enabled); shellcheck clean at
+  warning severity; one-liner `curl … | bash` bootstrap validated on the VM
+  (exit 0, fully idempotent re-run); pipefail/grep -q guard bug found and fixed;
+  tagged `v0.1.0`.
 - **M5 — phase 2 (true "fully featured OS"):** remaster a Zorin ISO / image with the
   provisioner pre-baked (live-build or Cubic), unattended first-boot execution,
   custom wallpapers/icons in `assets/branding/`.
