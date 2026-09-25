@@ -309,6 +309,11 @@ Each module: **objective → actions → idempotence guard → acceptance check.
 14. **RAM floor for local 7B models** — a 5 GiB VM swap-thrashed loading
     qwen2.5-coder:7b (4.7 GB) alongside GNOME. Preflight now warns below 8 GiB RAM;
     16 GiB recommended for comfortable local inference.
+15. **`grep -q` + `pipefail` silently inverts large-output guards** —
+    `fc-list | grep -qi …` SIGPIPEs fc-list on match, so the font guard reported
+    "missing" on every run and re-downloaded. Guard rewritten to drain the pipe
+    (`grep -i … >/dev/null`). Found only because the bootstrap one-liner test
+    re-ran the installer yet again.
 
 ## 10. Risks & mitigations
 

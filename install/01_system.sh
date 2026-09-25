@@ -37,7 +37,9 @@ else
 fi
 
 FONT_DIR="/usr/local/share/fonts/JetBrainsMono"
-if fc-list 2>/dev/null | grep -qi "JetBrainsMono Nerd Font"; then
+# NB: no `grep -q` here — under pipefail it SIGPIPEs fc-list and the guard
+# misreads "installed" as "missing", re-downloading on every run.
+if fc-list 2>/dev/null | grep -i "JetBrainsMono Nerd Font" >/dev/null 2>&1; then
   log "OK: JetBrainsMono Nerd Font already installed"
 else
   log "Downloading JetBrainsMono Nerd Font..."
