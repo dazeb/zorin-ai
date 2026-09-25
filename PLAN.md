@@ -90,6 +90,8 @@ zorin-ai/
 │       ├── Open_in_VSCodium
 │       ├── Ask_AI_to_Explain
 │       └── Open_Terminal_Here
+├── iso/
+│   └── build-zorin-ai-iso.sh        # M5: remaster Zorin ISO → Zorin-AI OS ISO
 └── assets/branding/       # reserved for wallpapers/icons (phase 2)
 ```
 
@@ -261,9 +263,17 @@ Each module: **objective → actions → idempotence guard → acceptance check.
   warning severity; one-liner `curl … | bash` bootstrap validated on the VM
   (exit 0, fully idempotent re-run); pipefail/grep -q guard bug found and fixed;
   tagged `v0.1.0`.
-- **M5 — phase 2 (true "fully featured OS"):** remaster a Zorin ISO / image with the
-  provisioner pre-baked (live-build or Cubic), unattended first-boot execution,
-  custom wallpapers/icons in `assets/branding/`.
+- **M5 — phase 2 (true "fully featured OS"):** *(pipeline built + ISO validated
+  2026-09-25)* — `iso/build-zorin-ai-iso.sh` remasters a Zorin 18.1 ISO: provisioner
+  snapshot baked at `/opt/zorin-ai`, first-boot autostart runner
+  (`/usr/local/sbin/zorin-ai-firstboot`, GitHub-fresh preferred / snapshot fallback),
+  boot menu rebranded "Zorin-AI OS", squashfs repacked with the original zstd
+  compressor, ISO rewritten with xorriso `boot_image replay` (BIOS + UEFI verified
+  intact). End-to-end proof: the built ISO was installed into a fresh VM through the
+  normal installer; on first login the provisioner launched itself and ran
+  unattended (modules 00–02 + ollama verified before the model pull hit
+  CDN throttling — download speed is environment-dependent, not a pipeline issue).
+  Remaining niceties: firmware/branding polish, unattended installer preseeding.
 
 ## 8. GUI acceptance checklist (M3, on the target VM)
 
@@ -323,6 +333,11 @@ Each module: **objective → actions → idempotence guard → acceptance check.
     "missing" on every run and re-downloaded. Guard rewritten to drain the pipe
     (`grep -i … >/dev/null`). Found only because the bootstrap one-liner test
     re-ran the installer yet again.
+16. **Fresh installs ship no SSH server** — found by the ISO first-boot test
+    (no way to reach a provisioned box remotely). `openssh-server` is now in the
+    core package list. Related: the first-boot runner prefers cloning the
+    provisioner from GitHub but a fresh Zorin has no `git`, so it correctly falls
+    back to the ISO-baked snapshot.
 
 ## 10. Risks & mitigations
 

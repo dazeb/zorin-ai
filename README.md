@@ -32,6 +32,8 @@ install.sh           orchestrator (flags: --skip-ai, --skip-gui)
 install/             modules 00–07 + lib.sh
 bin/                 zom, zom-menu
 configs/             mise, VSCodium, Continue, Nautilus script configs
+iso/                 build-zorin-ai-iso.sh — remaster Zorin into a bootable
+                     Zorin-AI OS ISO with first-boot auto-provisioning
 ```
 
 See [PLAN.md](PLAN.md) for the full build plan, verified software inventory,
