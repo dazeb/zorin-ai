@@ -41,3 +41,9 @@ d-i grub-installer/with_other_os boolean true
 # --- ubiquity behaviour: no summary screen, reboot when done ---------------
 ubiquity ubiquity/summary note
 ubiquity ubiquity/reboot boolean true
+
+# --- first wizard page ("Updates and other software") — found by boot test:
+# without these the unattended flow stops on that page waiting for Continue --
+ubiquity ubiquity/download_updates boolean true
+ubiquity ubiquity/use_nonfree boolean true
+ubiquity ubiquity/no_zorin_os_census boolean true
