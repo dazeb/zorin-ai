@@ -133,6 +133,8 @@ stat -c %s "$WORK/filesystem.squashfs" > "$ISO_TREE/casper/filesystem.size"
     | xargs -0 md5sum > md5sums.txt.new && mv md5sums.txt.new md5sums.txt )
 
 step "7/7 writing $OUT_ISO (boot equipment replayed from source ISO)"
+# xorriso refuses to overwrite a non-empty -outdev — remove the previous image.
+rm -f "$OUT_ISO"
 xorriso -indev "$SRC_ISO" \
   -outdev "$OUT_ISO" \
   -boot_image any replay \
@@ -141,7 +143,7 @@ xorriso -indev "$SRC_ISO" \
   -map "$ISO_TREE/md5sums.txt" /md5sums.txt \
   -map "$ISO_TREE/boot/grub/grub.cfg" /boot/grub/grub.cfg \
   -map "$ISO_TREE/.disk/info" /.disk/info \
-  -padding 0 >/dev/null 2>&1
+  -padding 0
 
 step "done"
 ls -lh "$OUT_ISO"
