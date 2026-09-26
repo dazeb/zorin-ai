@@ -205,8 +205,9 @@ Each module: **objective → actions → idempotence guard → acceptance check.
 ### 06_desktop_theme
 - **Actions** (all via `as_user` against the live session bus): window buttons
   `:minimize,maximize,close` (right side); `color-scheme prefer-dark` +
-  `gtk-theme ZorinBlue-Dark`; omarchy-style wallpaper set (procedurally generated
-  4K scenes in `assets/wallpapers/`, installed to
+  `gtk-theme ZorinBlue-Dark`; striking polygonal wallpaper set (procedurally
+  generated 4K low-poly scenes in `assets/wallpapers/` — sunset-peaks,
+  neon-rift, aurora-peaks, crimson-dunes, glacier-facet — installed to
   `/usr/local/share/backgrounds/zorin-ai/`, default + lock-screen set via
   `picture-uri[-dark]`; cycle with `zom bg next`); accent color attempted via
   `org.gnome.desktop.interface accent-color` (warn-not-die — key absent on some

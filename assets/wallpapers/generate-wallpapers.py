@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""generate-wallpapers.py — Zorin-AI OS wallpaper set, omarchy-style.
+"""generate-wallpapers.py — Zorin-AI OS wallpaper set: striking polygonal.
 
-Procedurally renders dark, minimal, moody desktop wallpapers (layered
-mountain/forest silhouettes, atmospheric gradients, stars, film grain).
-Deterministic: every scene is seeded, so builds are reproducible.
+Renders low-poly landscape wallpapers: faceted mountain layers with vivid
+palette-mapped elevation shading, flat sun discs, aurora ribbons and star
+fields over saturated gradient skies. Deterministic (seeded) so builds are
+reproducible.
 
 Usage:
   python3 generate-wallpapers.py [--outdir DIR] [--width W] [--height H]
@@ -18,6 +19,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 W, H = 3840, 2160
+COLS = 56  # facet columns — resolution-independent look
 
 
 # ---------------------------------------------------------------- noise utils
@@ -50,113 +52,139 @@ def lerp_rgb(a, b, t):
     return tuple(int(round(a[i] + (b[i] - a[i]) * t)) for i in range(3))
 
 
-def vertical_gradient(w, h, stops):
-    """stops: list of (pos 0..1, (r,g,b)) top->bottom."""
+def palette_at(stops, t):
+    """stops: list of (pos 0..1, (r,g,b)); t clamped to [0,1]."""
+    t = min(max(t, 0.0), 1.0)
+    for (p0, c0), (p1, c1) in zip(stops, stops[1:]):
+        if t <= p1:
+            span = (p1 - p0) or 1.0
+            return lerp_rgb(c0, c1, (t - p0) / span)
+    return stops[-1][1]
+
+
+def sky_gradient(w, h, stops):
     cols = np.zeros((h, w, 3), dtype=np.float64)
     ys = np.linspace(0, 1, h)
     for ch in range(3):
         vals = np.interp(ys, [p for p, _ in stops], [c[ch] for _, c in stops])
         cols[:, :, ch] = vals[:, None]
-    return cols
+    return Image.fromarray(cols.astype(np.uint8))
 
 
 # ---------------------------------------------------------------- scene parts
-def draw_sky(img_arr, rng, sky_stops, cloudiness=0.35, seed_shift=0):
-    """Vertical gradient + very-low-contrast drifting cloud bands."""
-    h, w, _ = img_arr.shape
-    base = vertical_gradient(w, h, sky_stops)
-    n = value_noise_1d(h, rng, octaves=5, base_freq=3 + seed_shift)
-    band = (n[:, None] - 0.5) * cloudiness * 14.0
-    img_arr[:] = np.clip(base + band[:, :, None], 0, 255)
-
-
-def draw_stars(img_arr, rng, density=90, max_y=0.62):
-    h, w, _ = img_arr.shape
+def draw_stars(img, rng, density=110, max_y=0.55):
+    arr = np.asarray(img).copy()
+    h, w, _ = arr.shape
     count = int(w * h / 1e6 * density)
     xs = (rng.random(count) * w).astype(int)
     ys = (rng.random(count) * h * max_y).astype(int)
     bright = rng.random(count)
     for x, y, b in zip(xs, ys, bright):
-        if b < 0.55:
-            v = 90 + int(b * 90)
-        elif b < 0.92:
-            v = 140 + int(b * 80)
-        else:
-            v = 220 + int(b * 35)
-        img_arr[y, x] = np.maximum(img_arr[y, x], v)
-        if b > 0.97:  # rare bright star with a soft halo
-            img_arr[y, x] = 255
-            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                yy, xx = y + dy, x + dx
-                if 0 <= yy < h and 0 <= xx < w:
-                    img_arr[yy, xx] = np.maximum(img_arr[yy, xx], 160)
+        v = 120 + int(b * 135)
+        arr[y, x] = np.maximum(arr[y, x], v)
+    out = Image.fromarray(arr)
+    return out
 
 
-def draw_moon(img_arr, cx, cy, r, tint=(225, 230, 235)):
-    h, w, _ = img_arr.shape
-    yy, xx = np.ogrid[:h, :w]
-    dist = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2)
-    disc = dist <= r
-    glow = np.exp(-(dist / (r * 6)) ** 2) * 0.55
-    img_arr[:] = img_arr * (1 - glow[:, :, None]) + np.array(tint) * glow[:, :, None]
-    img_arr[disc] = tint
+def draw_sun(img, cx, cy, r, color, glow=0.75, glow_color=None):
+    """Flat disc with a soft radial glow."""
+    gc = glow_color or color
+    glow_layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow_layer)
+    gd.ellipse([cx - r * 3.2, cy - r * 3.2, cx + r * 3.2, cy + r * 3.2],
+               fill=gc + (int(120 * glow),))
+    glow_layer = glow_layer.filter(ImageFilter.GaussianBlur(r * 1.1))
+    img = Image.alpha_composite(img.convert("RGBA"), glow_layer)
+    disc = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    dd = ImageDraw.Draw(disc)
+    dd.ellipse([cx - r, cy - r, cx + r, cy + r], fill=color + (255,))
+    return Image.alpha_composite(img, disc).convert("RGB")
 
 
-def ridge_mask(w, h, rng, base_y, amp, roughness=6):
-    """Silhouette polygon mask for one mountain layer."""
-    line = value_noise_1d(w, rng, octaves=6, persistence=0.55,
-                          base_freq=roughness)
-    ys = (base_y * h - line * amp * h).astype(int)
-    poly = [(x, int(y)) for x, y in enumerate(ys)] + [(w - 1, h), (0, h)]
-    mask = Image.new("L", (w, h), 0)
-    ImageDraw.Draw(mask).polygon(poly, fill=255)
-    return mask, ys
-
-
-def atmospheric_color(sky_pixel, ridge_color, depth):
-    """Blend ridge color toward the sky haze for far layers (aerial perspective)."""
-    return lerp_rgb(sky_pixel, ridge_color, depth)
-
-
-def draw_ridges(img, img_arr, rng, layers, palette, haze_y=0.55, blur=True,
-                haze_lift=None):
-    """layers: list of dicts(base_y, amp, rough, depth 0..1 near).
-
-    haze_lift: optional explicit haze color for dark skies; far layers fade
-    toward it (must be LIGHTER than the sky for silhouettes to read)."""
+def draw_aurora(img, rng, bands, seed_phase=0.0):
+    """Wavy glowing ribbons. bands: list of (center_y, thickness, color)."""
     w, h = img.size
-    haze = haze_lift or tuple(int(v) for v in img_arr[int(h * haze_y), int(w * 0.5)])
-    for spec in layers:
-        mask, _ = ridge_mask(w, h, rng, spec["base_y"], spec["amp"],
-                             spec.get("rough", 6))
-        color = lerp_rgb(haze, palette["ridge"], spec["depth"])
-        layer = Image.new("RGB", img.size, color)
-        if blur and spec["depth"] < 0.65:
-            layer = layer.filter(ImageFilter.GaussianBlur(3 + (1 - spec["depth"]) * 9))
-        img.paste(layer, (0, 0), mask)
-        img_arr[:] = np.asarray(img)
-
-
-def draw_mist(img, img_arr, rng, bands):
-    """Soft horizontal mist bands: bands = list of (center_y 0..1, strength)."""
-    w, h = img.size
-    for cy, strength in bands:
-        band = Image.new("L", (w, h), 0)
+    overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    for i, (cy, th, color) in enumerate(bands):
+        band = Image.new("RGBA", img.size, (0, 0, 0, 0))
         bd = ImageDraw.Draw(band)
-        yy = int(cy * h)
-        thickness = int(h * 0.045 * (0.6 + rng.random() * 0.8))
-        for i in range(thickness):
-            a = int(strength * 255 * (1 - abs(i - thickness / 2) / (thickness / 2)) ** 2)
-            bd.line([(0, yy + i), (w, yy + i)], fill=a)
-        band = band.filter(ImageFilter.GaussianBlur(28))
-        mist = Image.new("RGB", img.size, atmospheric_color(
-            tuple(int(v) for v in img_arr[yy, w // 2]), (200, 205, 215), 0.25))
-        img.paste(mist, (0, 0), band)
-        img_arr[:] = np.asarray(img)
+        n = value_noise_1d(w // 8, rng, octaves=4, base_freq=3)
+        xs = np.linspace(0, w, w // 8)
+        wave = cy * h + (n - 0.5) * h * 0.10
+        top = wave - th * h / 2
+        bot = wave + th * h / 2
+        pts = [(int(x), int(y)) for x, y in zip(xs, top)]
+        pts += [(int(x), int(y)) for x, y in zip(xs[::-1], bot[::-1])]
+        alpha = 120 - i * 25
+        bd.polygon(pts, fill=color + (alpha,))
+        band = band.filter(ImageFilter.GaussianBlur(h * 0.02))
+        overlay = Image.alpha_composite(overlay, band)
+    return Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
 
 
-def finish(img, grain=0.02, vignette=0.16):
-    """Film grain + vignette, then return the final image."""
+def facet_layer(img, rng, base_y, amp, elev_stops, light_k=0.55, cols=COLS,
+                rows=6, jitter=0.12):
+    """One faceted mountain silhouette — a real triangulated mesh.
+
+    The ridge line y(x) = base_y*h - e(x)*amp*h (e in [0,1]) forms the top
+    vertex row; `rows` more rows interpolate down to the canvas bottom. Each
+    grid cell splits into two triangles with alternating diagonals, colored
+    by mean vertex elevation through `elev_stops`, slope-lit from the left.
+    Interior vertices share an x-jitter so columns look organic, not striped.
+    """
+    w, h = img.size
+    d = ImageDraw.Draw(img)
+    e = value_noise_1d(cols + 1, rng, octaves=5, persistence=0.6,
+                       base_freq=3 + rng.integers(0, 3))
+    e = (e - e.min()) / (e.max() - e.min() + 1e-9)
+    cell = w / cols
+
+    # vertex grid: (rows+1) x (cols+1), shared x-jitter per column
+    xj = np.zeros(cols + 1)
+    xj[1:-1] = (rng.random(cols - 1) - 0.5) * 0.5 * cell
+    vx = np.array([i * cell + xj[i] for i in range(cols + 1)])
+    vy = np.zeros((rows + 1, cols + 1))
+    vt = np.zeros((rows + 1, cols + 1))
+    vy[0] = [base_y * h - float(ei) * amp * h for ei in e]
+    vt[0] = e
+    fade = 0.92  # elevation falloff per row toward the valley floor
+    for r in range(1, rows + 1):
+        f = r / rows
+        vy[r] = vy[0] + (h - vy[0]) * f
+        vt[r] = e * max(0.0, 1.0 - f * fade * 1.05)
+
+    for i in range(cols):
+        for r in range(rows):
+            quad = [(vx[i], vy[r, i]), (vx[i + 1], vy[r, i + 1]),
+                    (vx[i + 1], vy[r + 1, i + 1]), (vx[i], vy[r + 1, i])]
+            vidx = [(r, i), (r, i + 1), (r + 1, i + 1), (r + 1, i)]
+            if (i + r) % 2 == 0:
+                tris = ((0, 1, 2), (0, 2, 3))
+            else:
+                tris = ((0, 1, 3), (1, 2, 3))
+            for t_idx in tris:
+                pts = [quad[k] for k in t_idx]
+                t_avg = sum(vt[vidx[k]] for k in t_idx) / 3.0
+                base = np.array(palette_at(elev_stops, t_avg), dtype=np.float64)
+                dy = quad[1][1] - quad[0][1]  # + if right vertex is lower
+                b = 1.0 + np.clip(dy / (cell * 1.2), -1, 1) * light_k
+                b *= 1.0 + (rng.random() - 0.5) * 2 * jitter
+                col = tuple(int(np.clip(c * b, 0, 255)) for c in base)
+                d.polygon(pts, fill=col)
+
+    # crisp highlight along the ridge crest
+    for i in range(cols):
+        d.line([(vx[i], vy[0, i]), (vx[i + 1], vy[0, i + 1])],
+               fill=palette_at(elev_stops, min(e[i] + 0.2, 1.0)), width=3)
+    return img
+
+
+def shift_palette(stops, toward, t):
+    """Atmospheric shift: blend every stop toward `toward` by fraction t."""
+    return [(p, lerp_rgb(c, toward, t)) for p, c in stops]
+
+
+def finish(img, vignette=0.12, grain=0.006):
     arr = np.asarray(img).astype(np.float64)
     h, w, _ = arr.shape
     rng = np.random.default_rng(77)
@@ -168,117 +196,109 @@ def finish(img, grain=0.02, vignette=0.16):
 
 
 # ------------------------------------------------------------------- scenes
-def scene_midnight_ridges(w, h, seed):
+def scene_sunset_peaks(w, h, seed):
     rng = np.random.default_rng(seed)
-    img = Image.new("RGB", (w, h))
-    arr = np.zeros((h, w, 3))
-    draw_sky(arr, rng, [(0.0, hex_rgb("070b14")), (0.45, hex_rgb("0d1526")),
-                        (0.78, hex_rgb("1a2740")), (1.0, hex_rgb("24344f"))],
-             cloudiness=0.3)
-    draw_stars(arr, rng, density=110)
-    draw_moon(arr, w * 0.78, h * 0.16, int(h * 0.035))
-    img = Image.fromarray(arr.astype(np.uint8))
-    img_arr = np.asarray(img).astype(np.float64)
-    draw_ridges(img, img_arr, rng, [
-        dict(base_y=0.60, amp=0.12, rough=5, depth=0.30),
-        dict(base_y=0.71, amp=0.14, rough=6, depth=0.55),
-        dict(base_y=0.84, amp=0.15, rough=7, depth=0.85),
-        dict(base_y=0.98, amp=0.12, rough=8, depth=1.00),
-    ], palette=dict(ridge=hex_rgb("05080f")), haze_lift=hex_rgb("33456b"))
-    draw_mist(img, img_arr, rng, [(0.68, 0.14), (0.81, 0.10)])
+    img = sky_gradient(w, h, [(0.0, hex_rgb("1a0b2e")), (0.38, hex_rgb("7a1f6b")),
+                              (0.62, hex_rgb("e0447c")), (0.80, hex_rgb("ff7847")),
+                              (1.0, hex_rgb("ffc247"))])
+    img = draw_sun(img, w * 0.62, h * 0.60, int(h * 0.13),
+                   hex_rgb("ffd166"), glow_color=hex_rgb("ff9a3d"))
+    horizon = hex_rgb("ffc247")
+    facet_layer(img, rng, base_y=0.74, amp=0.16, cols=COLS,
+                elev_stops=shift_palette(
+                    [(0.0, hex_rgb("3a1650")), (0.55, hex_rgb("6b2585")),
+                     (1.0, hex_rgb("c94b8e"))], horizon, 0.45))
+    facet_layer(img, rng, base_y=0.86, amp=0.20, cols=COLS,
+                elev_stops=shift_palette(
+                    [(0.0, hex_rgb("1c0b2c")), (0.55, hex_rgb("471a63")),
+                     (0.85, hex_rgb("8a2f7a")), (1.0, hex_rgb("e866a8"))],
+                    horizon, 0.18))
+    facet_layer(img, rng, base_y=1.04, amp=0.24, cols=COLS,
+                elev_stops=[(0.0, hex_rgb("0d0518")), (0.5, hex_rgb("2a1040")),
+                            (0.8, hex_rgb("5c1f66")), (1.0, hex_rgb("b8427f"))])
     return finish(img)
 
 
-def scene_dusk_valley(w, h, seed):
+def scene_neon_rift(w, h, seed):
     rng = np.random.default_rng(seed)
-    img = Image.new("RGB", (w, h))
-    arr = np.zeros((h, w, 3))
-    draw_sky(arr, rng, [(0.0, hex_rgb("0b1020")), (0.40, hex_rgb("232a44")),
-                        (0.68, hex_rgb("6e4a3a")), (0.84, hex_rgb("b97a4a")),
-                        (1.0, hex_rgb("d99a5b"))], cloudiness=0.45)
-    draw_stars(arr, rng, density=40, max_y=0.35)
-    img = Image.fromarray(arr.astype(np.uint8))
-    img_arr = np.asarray(img).astype(np.float64)
-    draw_ridges(img, img_arr, rng, [
-        dict(base_y=0.70, amp=0.09, rough=5, depth=0.25),
-        dict(base_y=0.80, amp=0.11, rough=6, depth=0.60),
-        dict(base_y=0.95, amp=0.12, rough=8, depth=1.00),
-    ], palette=dict(ridge=hex_rgb("120e12")), haze_y=0.80)
-    draw_mist(img, img_arr, rng, [(0.74, 0.30), (0.88, 0.22)])
+    img = sky_gradient(w, h, [(0.0, hex_rgb("050514")), (0.42, hex_rgb("12123f")),
+                              (0.66, hex_rgb("2a1a6e")), (0.85, hex_rgb("6a1e8f")),
+                              (1.0, hex_rgb("b8298f"))])
+    img = draw_stars(img, rng, density=90, max_y=0.5)
+    img = draw_sun(img, w * 0.30, h * 0.58, int(h * 0.10),
+                   hex_rgb("ff3d81"), glow_color=hex_rgb("b8298f"))
+    cyan = hex_rgb("00e5ff")
+    facet_layer(img, rng, base_y=0.72, amp=0.15, cols=COLS,
+                elev_stops=shift_palette(
+                    [(0.0, hex_rgb("0a1030")), (0.6, hex_rgb("182a66")),
+                     (1.0, hex_rgb("2f6bb0"))], cyan, 0.35))
+    facet_layer(img, rng, base_y=0.90, amp=0.22, cols=COLS,
+                elev_stops=[(0.0, hex_rgb("040614")), (0.5, hex_rgb("0d1440")),
+                            (0.85, hex_rgb("1c2f80")), (1.0, hex_rgb("3fd6ff"))])
     return finish(img)
 
 
-def scene_teal_forest(w, h, seed):
+def scene_aurora_peaks(w, h, seed):
     rng = np.random.default_rng(seed)
-    img = Image.new("RGB", (w, h))
-    arr = np.zeros((h, w, 3))
-    draw_sky(arr, rng, [(0.0, hex_rgb("04100f")), (0.5, hex_rgb("0a201d")),
-                        (1.0, hex_rgb("123430"))], cloudiness=0.4)
-    draw_stars(arr, rng, density=55)
-    img = Image.fromarray(arr.astype(np.uint8))
-    img_arr = np.asarray(img).astype(np.float64)
-    draw_ridges(img, img_arr, rng, [
-        dict(base_y=0.60, amp=0.14, rough=9, depth=0.28),
-        dict(base_y=0.72, amp=0.15, rough=10, depth=0.55),
-        dict(base_y=0.86, amp=0.16, rough=11, depth=0.85),
-        dict(base_y=1.02, amp=0.14, rough=12, depth=1.00),
-    ], palette=dict(ridge=hex_rgb("020c0a")), haze_lift=hex_rgb("24544a"))
-    draw_mist(img, img_arr, rng, [(0.68, 0.15), (0.82, 0.11), (0.93, 0.08)])
+    img = sky_gradient(w, h, [(0.0, hex_rgb("030614")), (0.55, hex_rgb("081226")),
+                              (1.0, hex_rgb("0d1b33"))])
+    img = draw_stars(img, rng, density=150, max_y=0.75)
+    img = draw_aurora(img, rng, bands=[
+        (0.30, 0.10, hex_rgb("2bd97f")),
+        (0.42, 0.07, hex_rgb("27c8d8")),
+        (0.22, 0.05, hex_rgb("8f4fd1")),
+    ])
+    snow = hex_rgb("dff5ff")
+    facet_layer(img, rng, base_y=0.76, amp=0.14, cols=COLS,
+                elev_stops=shift_palette(
+                    [(0.0, hex_rgb("10233d")), (0.6, hex_rgb("1d3d5f")),
+                     (1.0, hex_rgb("4a7ba6"))], snow, 0.30))
+    facet_layer(img, rng, base_y=0.98, amp=0.22, cols=COLS,
+                elev_stops=[(0.0, hex_rgb("060d1a")), (0.5, hex_rgb("12283f")),
+                            (0.8, hex_rgb("27506e")), (1.0, hex_rgb("bfe8ff"))])
+    return finish(img, vignette=0.15)
+
+
+def scene_crimson_dunes(w, h, seed):
+    rng = np.random.default_rng(seed)
+    img = sky_gradient(w, h, [(0.0, hex_rgb("14060a")), (0.45, hex_rgb("4a0e1e")),
+                              (0.70, hex_rgb("8f1626")), (0.88, hex_rgb("e03a2f")),
+                              (1.0, hex_rgb("ff7a33"))])
+    img = draw_sun(img, w * 0.72, h * 0.66, int(h * 0.09),
+                   hex_rgb("ffe8d6"), glow_color=hex_rgb("ff7a33"))
+    facet_layer(img, rng, base_y=0.80, amp=0.10, cols=COLS, light_k=0.35,
+                elev_stops=shift_palette(
+                    [(0.0, hex_rgb("5c1020")), (1.0, hex_rgb("a8322f"))],
+                    hex_rgb("ff7a33"), 0.35))
+    facet_layer(img, rng, base_y=0.98, amp=0.16, cols=COLS, light_k=0.35,
+                elev_stops=[(0.0, hex_rgb("1c0508")), (0.6, hex_rgb("4a0f18")),
+                            (1.0, hex_rgb("8f2020"))])
+    return finish(img, vignette=0.14)
+
+
+def scene_glacier_facet(w, h, seed):
+    rng = np.random.default_rng(seed)
+    img = sky_gradient(w, h, [(0.0, hex_rgb("072733")), (0.45, hex_rgb("0e4a5c")),
+                              (0.75, hex_rgb("1a7a8c")), (1.0, hex_rgb("3dbdc9"))])
+    img = draw_sun(img, w * 0.40, h * 0.34, int(h * 0.08),
+                   hex_rgb("eafcff"), glow_color=hex_rgb("7adfe8"))
+    ice = hex_rgb("eafcff")
+    facet_layer(img, rng, base_y=0.74, amp=0.14, cols=COLS,
+                elev_stops=shift_palette(
+                    [(0.0, hex_rgb("0a3a48")), (0.6, hex_rgb("16606e")),
+                     (1.0, hex_rgb("3fa5ad"))], ice, 0.25))
+    facet_layer(img, rng, base_y=0.96, amp=0.20, cols=COLS,
+                elev_stops=[(0.0, hex_rgb("04202b")), (0.5, hex_rgb("0a4754")),
+                            (0.85, hex_rgb("187a86")), (1.0, hex_rgb("c9f4f7"))])
     return finish(img)
-
-
-def scene_storm_coast(w, h, seed):
-    rng = np.random.default_rng(seed)
-    img = Image.new("RGB", (w, h))
-    arr = np.zeros((h, w, 3))
-    draw_sky(arr, rng, [(0.0, hex_rgb("0c1216")), (0.45, hex_rgb("1a2830")),
-                        (0.72, hex_rgb("2c4250")), (1.0, hex_rgb("375663"))],
-             cloudiness=0.6)
-    img = Image.fromarray(arr.astype(np.uint8))
-    img_arr = np.asarray(img).astype(np.float64)
-    # sea: darken lower half with horizontal streaks
-    hz = int(h * 0.62)
-    sea = img_arr.copy()
-    sea[hz:, :] *= np.linspace(1.0, 0.35, h - hz)[:, None, None]
-    streak = value_noise_1d(h - hz, rng, octaves=4, base_freq=40)
-    sea[hz:, :] *= (0.9 + 0.2 * streak)[:, None, None]
-    img = Image.fromarray(sea.astype(np.uint8))
-    img_arr = np.asarray(img).astype(np.float64)
-    draw_mist(img, img_arr, rng, [(0.63, 0.30), (0.70, 0.16)])
-    # headland cliff, near-black
-    mask, _ = ridge_mask(w, h, rng, base_y=0.94, amp=0.16, roughness=3)
-    layer = Image.new("RGB", img.size, hex_rgb("05080a")).filter(
-        ImageFilter.GaussianBlur(1.5))
-    img.paste(layer, (0, 0), mask)
-    img_arr[:] = np.asarray(img)
-    return finish(img, grain=0.025)
-
-
-def scene_ember_minimal(w, h, seed):
-    rng = np.random.default_rng(seed)
-    img = Image.new("RGB", (w, h))
-    arr = np.zeros((h, w, 3))
-    draw_sky(arr, rng, [(0.0, hex_rgb("08080a")), (0.55, hex_rgb("101014")),
-                        (0.80, hex_rgb("241a16")), (1.0, hex_rgb("38241a"))],
-             cloudiness=0.25)
-    draw_stars(arr, rng, density=70, max_y=0.5)
-    img = Image.fromarray(arr.astype(np.uint8))
-    img_arr = np.asarray(img).astype(np.float64)
-    draw_ridges(img, img_arr, rng, [
-        dict(base_y=0.86, amp=0.07, rough=4, depth=0.55),
-        dict(base_y=1.00, amp=0.06, rough=6, depth=1.00),
-    ], palette=dict(ridge=hex_rgb("070607")), haze_lift=hex_rgb("4a3324"),
-        haze_y=0.9)
-    draw_mist(img, img_arr, rng, [(0.90, 0.10)])
-    return finish(img, grain=0.015, vignette=0.2)
 
 
 SCENES = {
-    "midnight-ridges": scene_midnight_ridges,
-    "dusk-valley": scene_dusk_valley,
-    "teal-forest": scene_teal_forest,
-    "storm-coast": scene_storm_coast,
-    "ember-minimal": scene_ember_minimal,
+    "sunset-peaks": scene_sunset_peaks,
+    "neon-rift": scene_neon_rift,
+    "aurora-peaks": scene_aurora_peaks,
+    "crimson-dunes": scene_crimson_dunes,
+    "glacier-facet": scene_glacier_facet,
 }
 
 

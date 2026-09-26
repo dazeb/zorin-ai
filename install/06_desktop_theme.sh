@@ -36,20 +36,27 @@ if [ "${#favorites[@]}" -gt 0 ]; then
   log "Favorites: ${favorites[*]}"
 fi
 
-log "Applying omarchy-style wallpaper set..."
+log "Applying polygonal wallpaper set..."
 WALLPAPER_DIR="/usr/local/share/backgrounds/zorin-ai"
 sudo mkdir -p "$WALLPAPER_DIR"
+# drop any previous-generation wallpapers
+sudo rm -f "$WALLPAPER_DIR"/zorin-ai-midnight-ridges-*.jpg \
+           "$WALLPAPER_DIR"/zorin-ai-dusk-valley-*.jpg \
+           "$WALLPAPER_DIR"/zorin-ai-teal-forest-*.jpg \
+           "$WALLPAPER_DIR"/zorin-ai-storm-coast-*.jpg \
+           "$WALLPAPER_DIR"/zorin-ai-ember-minimal-*.jpg
 for wp in "$REPO_ROOT"/assets/wallpapers/*.jpg; do
   [ -f "$wp" ] || continue
   sudo install -m 644 "$wp" "$WALLPAPER_DIR/$(basename "$wp")"
 done
-# Default: the moonlit ridge scene, for light and dark modes plus lock screen.
-DEFAULT_WP="$WALLPAPER_DIR/zorin-ai-midnight-ridges-2160p.jpg"
+# Default: the striking sunset scene; aurora for the lock screen.
+DEFAULT_WP="$WALLPAPER_DIR/zorin-ai-sunset-peaks-2160p.jpg"
+LOCK_WP="$WALLPAPER_DIR/zorin-ai-aurora-peaks-2160p.jpg"
 if [ -f "$DEFAULT_WP" ]; then
   gs org.gnome.desktop.background picture-uri "file://$DEFAULT_WP"
   gs org.gnome.desktop.background picture-uri-dark "file://$DEFAULT_WP"
   gs org.gnome.desktop.background picture-options 'zoom'
-  gs org.gnome.desktop.screensaver picture-uri "file://$WALLPAPER_DIR/zorin-ai-ember-minimal-2160p.jpg"
+  [ -f "$LOCK_WP" ] && gs org.gnome.desktop.screensaver picture-uri "file://$LOCK_WP"
   log "Wallpaper set (cycle with: zom bg next)"
 fi
 
