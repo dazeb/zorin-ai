@@ -15,13 +15,13 @@ curl -fsSL https://raw.githubusercontent.com/dazeb/zorin-ai/main/boot.sh | bash
 | Area | Software |
 |------|----------|
 | Local AI | [Ollama](https://ollama.com) on `127.0.0.1:11434` + `qwen2.5-coder:7b` and the `nomic-embed-text` embedding model, wired into everything below |
-| Agents menu | Start-menu **Agents** section — Codex, Claude Code, OpenCode, Grok — with branded icons and install-on-first-use launchers |
+| Agents menu | Start-menu **Agents** section — Codex, Claude Code, OpenCode, Grok, Gemini CLI, Qwen Code — with white glyph icons and install-on-first-use launchers |
 | Editor | [VSCodium](https://vscodium.com) with Continue.dev, GitLens, Prettier, Python, Go extensions |
 | Chat GUI | [Chatbox](https://chatboxai.app) desktop client (official `.deb`) |
 | Task manager | Mission Center (Flathub) — Windows-Task-Manager-style |
 | Runtimes | [mise](https://mise.jdx.dev) managing Node LTS, Python 3.12, Go system-wide |
 | Mouse ergonomics | Nautilus right-click: *Open in VSCodium*, *Ask AI to Explain*, *Open Terminal Here* |
-| Desktop | Windows/KDE-style window buttons, dark mode, pinned taskbar favorites, desktop icons, striking polygonal wallpaper set (`zom bg next` cycles it) |
+| Desktop | Dark cyberpunk shell theme (ZorinAI-Dark: 4px facets, neon pink/purple/green accents), purple GTK dark mode, striking polygonal wallpaper set (`zom bg next` cycles it), white menu icons |
 | Maintenance | `zom` CLI + `zom-menu` GUI panel (`update`, `doctor`, `models`) |
 | Persistence | `/etc/skel` defaults for every new user |
 

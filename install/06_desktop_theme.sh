@@ -54,7 +54,7 @@ for i in "$REPO_ROOT"/assets/icons/zorin-ai-*.svg; do
 done
 sudo update-desktop-database >/dev/null 2>&1 || true
 sudo gtk-update-icon-cache -q -t -f /usr/local/share/icons/hicolor 2>/dev/null || true
-log "OK: Agents section — Codex, Claude Code, OpenCode, Grok (install-on-first-use)"
+log "OK: Agents section — Codex, Claude Code, OpenCode, Grok, Gemini CLI, Qwen Code (install-on-first-use)"
 
 log "Installing AI-first application menu (replaces stock category tree)..."
 sudo install -m 644 "$REPO_ROOT/configs/applications/zorin-ai-local-llm.directory" \
