@@ -1,68 +1,205 @@
 # zorin-ai
 
-Mouse-first AI developer workstation provisioner for **Zorin OS 17+** (Ubuntu LTS base),
-in the spirit of [Omakub](https://omakub.org) — but with **full mouse parity**:
-no task requires opening a terminal.
+**A mouse-first, AI-agent workstation for Zorin OS — one command, or one ISO.**
 
-One command on a fresh Zorin machine:
+zorin-ai turns a fresh [Zorin OS](https://zorin.com) 18.x machine into a
+complete AI development workstation: a local LLM stack, a start menu built
+around AI agents, polyglot runtimes, and a dark cyberpunk theme with
+polygonal wallpapers — all installed and wired together by an idempotent
+provisioner you can run again and again.
+
+It follows the [Omakub](https://omakub.org) pattern with one deliberate
+difference: **full mouse parity**. Nothing in the day-to-day workflow requires
+opening a terminal — unless you want to, because the terminal is where the
+agents live.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/dazeb/zorin-ai/main/boot.sh | bash
 ```
 
+Prefer to review first: `git clone https://github.com/dazeb/zorin-ai && cd zorin-ai && ./boot.sh`
+
+---
+
 ## What you get
 
 | Area | Software |
 |------|----------|
-| Local AI | [Ollama](https://ollama.com) on `127.0.0.1:11434` + `qwen2.5-coder:7b` and the `nomic-embed-text` embedding model, wired into everything below |
-| Agents menu | Start-menu **Agents** section — Codex, Claude Code, OpenCode, Grok, Gemini CLI, Qwen Code — with white glyph icons and install-on-first-use launchers |
-| Editor | [VSCodium](https://vscodium.com) with Continue.dev, GitLens, Prettier, Python, Go extensions |
-| Chat GUI | [Chatbox](https://chatboxai.app) desktop client (official `.deb`) |
-| Task manager | Mission Center (Flathub) — Windows-Task-Manager-style |
-| Runtimes | [mise](https://mise.jdx.dev) managing Node LTS, Python 3.12, Go system-wide |
-| Mouse ergonomics | Nautilus right-click: *Open in VSCodium*, *Ask AI to Explain*, *Open Terminal Here* |
-| Desktop | Dark cyberpunk shell theme (ZorinAI-Dark: 4px facets, neon pink/purple/green accents), purple GTK dark mode, striking polygonal wallpaper set (`zom bg next` cycles it), white menu icons |
-| Maintenance | `zom` CLI + `zom-menu` GUI panel (`update`, `doctor`, `models`) |
-| Persistence | `/etc/skel` defaults for every new user |
+| Local AI | [Ollama](https://ollama.com) on `127.0.0.1:11434` with `qwen2.5-coder:7b` (coding) and `nomic-embed-text` (embeddings for RAG) |
+| Agents menu | **Codex, Claude Code, OpenCode, Grok, Gemini CLI, Qwen Code** — each launches in a terminal and installs itself on first use (with your consent) |
+| Local LLM menu | [Chatbox](https://chatboxai.app) desktop chat, **AI Models** manager, **AI Health Check** |
+| Editor | [VSCodium](https://vscodium.com) + Continue.dev (pre-wired to local Ollama), GitLens, Prettier, Python, Go |
+| Task manager | Mission Center (Flathub) — Windows-Task-Manager-style, CPU/RAM/GPU |
+| Runtimes | [mise](https://mise.jdx.dev) managing Node LTS, Python 3.12, Go — system-wide, for every user |
+| Mouse ergonomics | Nautilus right-click: *Open in VSCodium*, *Ask AI to Explain* (sends the file to local Ollama, answers in a dialog), *Open Terminal Here* |
+| Desktop | ZorinAI-Dark shell theme, AI-first start menu, white menu icons, neon polygonal 4K wallpapers, dark mode, Windows-style window buttons, pinned taskbar |
+| Maintenance | `zom` CLI + `zom-menu` GUI panel |
+| Persistence | New user accounts inherit the whole setup via `/etc/skel` |
+| Bootable ISO | Build a **Zorin-AI OS** image with everything baked in (see below) |
 
-## Layout
+### The start menu, rebuilt AI-first
+
+The stock GNOME category tree (Accessories, Graphics, Office…) is replaced:
 
 ```
-boot.sh              remote fetcher / repo updater
-install.sh           orchestrator (flags: --skip-ai, --skip-gui)
-install/             modules 00–07 + lib.sh
-bin/                 zom, zom-menu
-configs/             mise, VSCodium, Continue, Nautilus script configs
-iso/                 build-zorin-ai-iso.sh — remaster Zorin into a bootable
-                     Zorin-AI OS ISO with first-boot auto-provisioning
+Agents  →  Codex · Claude Code · OpenCode · Grok · Gemini CLI · Qwen Code
+Local LLM  →  Chatbox · AI Models · AI Health Check
+Development  →  VSCodium …
+Internet  ·  Media  ·  Utilities  ·  System
 ```
 
-See [PLAN.md](PLAN.md) for the full build plan, verified software inventory,
-and design deviations from the source spec.
+Everything still lives in **All Apps** and search — only the category browsing
+is curated.
+
+## The look
+
+Dark by default, sharp by design, fluorescent by taste:
+
+- **ZorinAI-Dark** shell theme — derived from your installed Zorin dark theme
+  at provision time (nothing third-party shipped): every rounded corner in the
+  shell UI clamped to 4 px facets, menu panels in near-black with a
+  fluorescent-pink hairline border, purple selection highlights, green
+  checkmarks, glowing focus ring on the search entry.
+- **Solid white menu icons** — agent glyphs and category icons are white
+  geometric marks, consistent across every section.
+- **Polygonal 4K wallpapers** — five procedurally rendered, seeded scenes in
+  fluorescent pink / green / purple (`sunset-peaks`, `neon-rift`,
+  `aurora-peaks`, `crimson-dunes`, `glacier-facet`), generated by
+  [`assets/wallpapers/generate-wallpapers.py`](assets/wallpapers/generate-wallpapers.py)
+  (pillow + numpy, fully reproducible: `--seed`, `--only`, `--width/--height`).
+- GTK applications run **ZorinPurple-Dark**; libadwaita apps follow the dark
+  color scheme.
 
 ## Maintenance
 
 ```bash
-zom update        # apt + flatpak + mise runtimes + AI models
-zom doctor        # health check (Ollama, mise, VSCodium, GPU, disk)
-zom models gui    # pick & download models from a GUI list
-zom bg next       # cycle the polygonal wallpaper set
-zom-menu          # the same things, mouse-driven
+zom update        # apt + Flatpak apps + mise runtimes + AI model refresh
+zom doctor        # health check: OS, Ollama + models, mise runtimes, editors, GPU, disk
+zom models list   # local models
+zom models pull <model>   # e.g. zom models pull llama3.2:3b
+zom models gui    # pick from a curated list (zenity)
+zom bg next       # cycle the wallpaper set
+zom-menu          # all of the above, mouse-driven
 ```
 
-## Flags
+Agents are managed from the **Agents** menu; each entry checks for its CLI and
+offers a one-click npm install the first time you use it (node comes from mise).
+
+## Requirements
+
+- Zorin OS 18.x (Ubuntu 24.04 base). *Tested on Zorin OS 18.1; 17.x is
+  untested but the provisioner accepts any `zorin`/Ubuntu-based `/etc/os-release`.*
+- A user with sudo (headless/SSH runs need passwordless sudo or cached credentials)
+- ≥ 25 GB free disk (models + runtimes); **8 GB RAM minimum**, 16 GB
+  recommended for 7B-class local models (you get a warning below that)
+- Internet access (Ubuntu archive + Flathub + GitHub reachability is checked)
+
+## Configuration
+
+Environment variables, all optional:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `ZORIN_AI_MODEL` | `qwen2.5-coder:7b` | Coding model pulled by module 03 |
+| `ZORIN_AI_EMBED_MODEL` | `nomic-embed-text` | Embedding model for RAG |
+| `ZORIN_AI_REPO_URL` | `https://github.com/dazeb/zorin-ai.git` | Source repo (boot.sh + ISO first-boot) |
+| `ZORIN_AI_BRANCH` | `main` | Branch to pull |
+| `ZORIN_AI_HOME` | `~/.local/share/zorin-ai` | Provisioner install location |
+| `ZORIN_AI_LOG` | `/tmp/zorin-ai-install-<ts>.log` | Installer log path |
+| `ZORIN_AI_OLLAMA_URL` | `http://localhost:11434` | Endpoint used by the *Ask AI to Explain* script |
+
+Installer flags: `--skip-ai` (no Ollama/model downloads), `--skip-gui`
+(headless-ish: skips GUI apps, Nautilus scripts, theme, shell reskin).
+
+## Building the Zorin-AI OS ISO
+
+`iso/build-zorin-ai-iso.sh` remasters a stock Zorin live ISO:
+
+1. extracts the ISO tree and unpacks `casper/filesystem.squashfs`
+2. bakes in a snapshot of this provisioner at `/opt/zorin-ai`
+3. adds `/usr/local/sbin/zorin-ai-firstboot` + an autostart entry so the
+   provisioner runs on the user's **first desktop login** after installation
+   (it prefers a fresh clone from GitHub and falls back to the baked snapshot
+   when offline)
+4. rebrands the boot menu to "Zorin-AI OS", resquashes with the original
+   compressor, and rewrites the ISO preserving BIOS + UEFI boot equipment
+5. prints the new sha256
 
 ```bash
-./boot.sh --skip-ai     # everything except Ollama/model download
-./boot.sh --skip-gui    # headless-ish: skip GUI apps, Nautilus and theme steps
-ZORIN_AI_MODEL=llama3.2:3b ./boot.sh   # different default model
+sudo ./iso/build-zorin-ai-iso.sh Zorin-OS-18.1-Core-64-bit.iso zorin-ai-os-18.1-amd64.iso
+# needs: xorriso, squashfs-tools, git, root, ~25 GiB scratch (WORK_BASE=…)
 ```
 
-## Status
+Install the resulting ISO like normal Zorin — same installer, same flow.
+On first login a terminal appears, asks once for your sudo password, and
+builds the workstation.
 
-**Phase 1 provisioner is VM-validated.** Installed end-to-end on a clean Zorin OS 18.1
-VM (Proxmox): four installer runs including one interrupted by a host reboot — the
-installer resumed cleanly and re-runs are no-ops (idempotence proven). `zom doctor`
-all green; runtimes, extensions, Flatpaks, Chatbox, gsettings and `/etc/skel`
-defaults all verified. Remaining: interactive GUI walkthrough (M3) and release
-polish (M4). See [PLAN.md](PLAN.md) §7 for milestone detail.
+## Architecture
+
+```
+boot.sh ──► install.sh ──► modules 00–08
+                            │
+   00 preflight             │  user / OS / network / disk / RAM guards
+   01 system                │  apt core, Flathub, Nerd Fonts
+   02 mise                  │  runtime manager, login + interactive shells
+   03 ai core               │  Ollama daemon, coding + embedding models
+   04 gui apps              │  VSCodium (+5 extensions), Mission Center, Chatbox
+   05 mouse ergonomics      │  Nautilus right-click scripts
+   06 desktop theme         │  ergonomics gsettings, wallpapers, Agents menu,
+                            │  AI-first application menu tree
+   07 persistence           │  /etc/skel defaults, zom CLI
+   08 shell theme           │  ZorinAI-Dark derivation, white icons, purple GTK
+```
+
+**Idempotence is the contract**: every module guards every mutation, so the
+installer can be re-run after a crash, an OS update, or just to catch up —
+and the ISO's first-boot runner relies on exactly that.
+
+`gsettings`/dconf work is executed against the user's **real desktop session
+bus** (`/run/user/<uid>/bus`), so theme changes apply to the running session
+rather than a throwaway bus.
+
+## Repository layout
+
+```
+boot.sh                  remote fetcher
+install.sh               orchestrator (--skip-ai, --skip-gui)
+install/                 modules 00–08 + lib.sh (shared helpers)
+bin/                     zom, zom-menu, zorin-ai-agent
+configs/                 mise, VSCodium, Continue.dev, .desktop launchers,
+                         XDG menu tree, Nautilus scripts
+assets/wallpapers/       generator + 5 seeded 4K scenes
+assets/icons/            white SVG glyphs (+ overrides/ for stock icon names)
+iso/                     build-zorin-ai-iso.sh
+```
+
+## Troubleshooting
+
+- **Menu changes didn't appear** — the shell caches the menu tree per session;
+  log out/in (or reboot).
+- **"Ask AI to Explain" is slow the first time** — the model loads into RAM on
+  first use (~30 s warm-up; longer on CPU-only machines).
+- **Ollama runs on CPU** — expected without an NVIDIA GPU; `zom doctor` reports
+  what was detected.
+- **Installer says sudo is required over SSH** — headless runs need
+  passwordless sudo or recently cached credentials; interactive runs can just
+  type the password.
+- **Chatbox first run** — its wizard auto-detects the local Ollama on
+  `localhost:11434`; accept and chat.
+- **An agent isn't installed yet** — launch it from the Agents menu and accept
+  the install prompt; it needs node (included) and internet.
+
+## Status & roadmap
+
+Tested end-to-end on Zorin OS 18.1 (clean VM, full install, idempotent re-runs,
+first-boot provisioning from the ISO). Current release: **v0.2.0**.
+
+On the roadmap: unattended OS-install preseeding, more agent launchers
+(Aider, Goose — non-npm install paths), custom branding assets, GTK-level
+corner-radius work.
+
+## License
+
+Not yet selected — all rights reserved until then. Agent names and logos
+belong to their respective projects; zorin-ai ships none of them, only
+launchers.
