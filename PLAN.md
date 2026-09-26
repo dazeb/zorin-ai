@@ -213,6 +213,15 @@ Each module: **objective → actions → idempotence guard → acceptance check.
   `org.gnome.desktop.interface accent-color` (warn-not-die — key absent on some
   Zorin builds); pin favorites filtered to desktop entries that actually exist;
   enable DING desktop-icons keys (`show-home`, `show-trash`) when the schema exists.
+
+  Also part of 06: the **Agents menu section** — branded SVG tile icons
+  (`assets/icons/`), XDG launchers for Codex / Claude Code / OpenCode / Grok
+  (`configs/applications/`) that open the agent in gnome-terminal through
+  `bin/zorin-ai-agent` (installs the agent's npm package on first use, with a
+  zenity consent prompt, via mise-managed node), an XDG menu merge adding the
+  "Agents" category (`configs/xdg/zorin-ai-agents.menu`), and a GNOME app-grid
+  "Agents" folder via the relocatable `org.gnome.desktop.app-folders.folder`
+  schema.
 - **Guard:** every `gsettings` step is `warn`-not-`die` — theme/favorites must never
   abort an otherwise complete install.
 - **Accept:** window controls on the right, dark mode, taskbar shows the pinned apps.
