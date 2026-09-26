@@ -15,7 +15,26 @@
 #      (BIOS + EFI, same volume id), and refreshes filesystem.size/md5sums.txt
 #
 # Usage:  sudo ./build-zorin-ai-iso.sh <zorin-live.iso> [out.iso]
-# Needs:  xorriso, squashfs-tools, git, ~25 GiB scratch (set WORK_BASE).
+# Needs:  xorriso, squashfs-tools, git, openssl, ~25 GiB scratch (set WORK_BASE).
+#
+# Unattended installer (Ubiquity preseeding): a seed generated from
+# iso/preseed/zorin-ai.seed.in is baked at /preseed/zorin-ai.seed and an
+# "Install Zorin-AI OS (unattended)" boot entry is added to both the BIOS
+# (isolinux) and UEFI (grub) menus. Set ZORIN_AI_UNATTENDED=1 to make it the
+# default (5 s timeout) so a fresh VM installs fully hands-off.
+#
+# Build-time knobs (env):
+#   ZORIN_AI_UNATTENDED  1 = boot straight into the unattended install (default 0)
+#   ZORIN_AI_USER        account to create            (default zorin)
+#   ZORIN_AI_FULLNAME    GECOS full name              (default "Zorin-AI User")
+#   ZORIN_AI_HOSTNAME    installed hostname           (default zorin-ai)
+#   ZORIN_AI_PASSWORD    plaintext, hashed at build   (default zorin-ai)
+#   ZORIN_AI_LOCALE      (default en_US.UTF-8)
+#   ZORIN_AI_KEYMAP      console layout code          (default us)
+#   ZORIN_AI_TIMEZONE    (default UTC)
+#
+# The seed carries the password hash — anyone with the ISO can read it.
+# Only bake throwaway credentials.
 set -Eeuo pipefail
 
 SRC_ISO="${1:?usage: build-zorin-ai-iso.sh <zorin-live.iso> [out.iso]}"
@@ -23,8 +42,19 @@ OUT_ISO="${2:-zorin-ai-os-amd64.iso}"
 REPO="${REPO_URL:-https://github.com/dazeb/zorin-ai.git}"
 WORK_BASE="${WORK_BASE:-/var/tmp}"
 
+UNATTENDED="${ZORIN_AI_UNATTENDED:-0}"
+AI_USER="${ZORIN_AI_USER:-zorin}"
+AI_FULLNAME="${ZORIN_AI_FULLNAME:-Zorin-AI User}"
+AI_HOSTNAME="${ZORIN_AI_HOSTNAME:-zorin-ai}"
+AI_PASSWORD="${ZORIN_AI_PASSWORD:-zorin-ai}"
+AI_LOCALE="${ZORIN_AI_LOCALE:-en_US.UTF-8}"
+AI_KEYMAP="${ZORIN_AI_KEYMAP:-us}"
+AI_TIMEZONE="${ZORIN_AI_TIMEZONE:-UTC}"
+SEED_TEMPLATE="$(cd "$(dirname "$0")" && pwd)/preseed/zorin-ai.seed.in"
+
 need() { command -v "$1" >/dev/null 2>&1 || { echo "missing dependency: $1" >&2; exit 1; }; }
-need xorriso; need unsquashfs; need mksquashfs; need git
+need xorriso; need unsquashfs; need mksquashfs; need git; need openssl
+[ -f "$SEED_TEMPLATE" ] || { echo "missing preseed template: $SEED_TEMPLATE" >&2; exit 1; }
 
 WORK="$(mktemp -d "$WORK_BASE/zorin-ai-iso-build.XXXXXXXX")"
 ISO_TREE="$WORK/iso"
@@ -114,9 +144,62 @@ X-GNOME-Autostart-enabled=true
 NoDisplay=false
 EOF
 
+# --- unattended preseed: bake the seed, add the boot entries ---------------
+step "4/7 generating unattended preseed seed"
+mkdir -p "$ISO_TREE/preseed"
+# sha512-crypt alphabet is [./0-9A-Za-z$] — no sed metachars for the | delimiter.
+PASSWORD_CRYPT="$(openssl passwd -6 "$AI_PASSWORD")"
+sed -e "s|@LOCALE@|$AI_LOCALE|g" \
+    -e "s|@KEYMAP@|$AI_KEYMAP|g" \
+    -e "s|@TIMEZONE@|$AI_TIMEZONE|g" \
+    -e "s|@HOSTNAME@|$AI_HOSTNAME|g" \
+    -e "s|@USERNAME@|$AI_USER|g" \
+    -e "s|@FULLNAME@|$AI_FULLNAME|g" \
+    -e "s|@PASSWORD_CRYPT@|$PASSWORD_CRYPT|g" \
+    "$SEED_TEMPLATE" > "$ISO_TREE/preseed/zorin-ai.seed"
+chmod 644 "$ISO_TREE/preseed/zorin-ai.seed"
+
+step "4/7 adding unattended boot entries (BIOS isolinux + UEFI grub)"
 if [ -f "$ISO_TREE/boot/grub/grub.cfg" ]; then
   sed -i 's/Try or Install Zorin OS/Try or Install Zorin-AI OS/g' "$ISO_TREE/boot/grub/grub.cfg" || true
 fi
+SEED_ARGS="file=/cdrom/preseed/zorin-ai.seed auto=true priority=critical automatic-ubiquity"
+
+GRUB_ENTRY="menuentry \"Install Zorin-AI OS (unattended)\" --class zorin {
+	set gfxpayload=keep
+	linux	/casper/vmlinuz maybe-ubiquity $SEED_ARGS quiet splash ---
+	initrd	/casper/initrd.zstd
+}"
+if [ "$UNATTENDED" = 1 ]; then
+  # default entry: prepend before the first menuentry, shorten the timeout
+  sed -i 's/^set timeout=[0-9]\+/set timeout=5/' "$ISO_TREE/boot/grub/grub.cfg"
+  awk -v e="$GRUB_ENTRY" '!d && /^menuentry / { print e; print ""; d=1 } { print }' \
+    "$ISO_TREE/boot/grub/grub.cfg" > "$ISO_TREE/boot/grub/grub.cfg.new" \
+    && mv "$ISO_TREE/boot/grub/grub.cfg.new" "$ISO_TREE/boot/grub/grub.cfg"
+else
+  # selectable but not default: insert before the trailing grub_platform block
+  awk -v e="$GRUB_ENTRY" '/^grub_platform/ && !d { print e; print ""; d=1 } { print }' \
+    "$ISO_TREE/boot/grub/grub.cfg" > "$ISO_TREE/boot/grub/grub.cfg.new" \
+    && mv "$ISO_TREE/boot/grub/grub.cfg.new" "$ISO_TREE/boot/grub/grub.cfg"
+fi
+
+ISOLINUX_EXTRA=""
+[ "$UNATTENDED" = 1 ] && ISOLINUX_EXTRA='  MENU DEFAULT'
+cat >> "$ISO_TREE/isolinux/menuentries.cfg" <<EOF
+MENU SEPARATOR
+
+LABEL unattended
+  MENU LABEL ^Install Zorin-AI OS (unattended)
+$ISOLINUX_EXTRA
+  KERNEL /casper/vmlinuz
+  APPEND maybe-ubiquity initrd=/casper/initrd.zstd $SEED_ARGS quiet splash ---
+EOF
+if [ "$UNATTENDED" = 1 ]; then
+  # DEFAULT lives in menuentries.cfg; TIMEOUT (1/10 s units, 50 => 5 s) in isolinux.cfg
+  sed -i 's/^DEFAULT live/DEFAULT unattended/' "$ISO_TREE/isolinux/menuentries.cfg"
+  sed -i 's/^TIMEOUT [0-9]\+/TIMEOUT 50/' "$ISO_TREE/isolinux/isolinux.cfg"
+fi
+
 if [ -f "$ISO_TREE/.disk/info" ]; then
   sed -i 's/Zorin OS/Zorin-AI OS/' "$ISO_TREE/.disk/info" || true
 fi
@@ -142,6 +225,9 @@ xorriso -indev "$SRC_ISO" \
   -map "$ISO_TREE/casper/filesystem.size" /casper/filesystem.size \
   -map "$ISO_TREE/md5sums.txt" /md5sums.txt \
   -map "$ISO_TREE/boot/grub/grub.cfg" /boot/grub/grub.cfg \
+  -map "$ISO_TREE/preseed/zorin-ai.seed" /preseed/zorin-ai.seed \
+  -map "$ISO_TREE/isolinux/menuentries.cfg" /isolinux/menuentries.cfg \
+  -map "$ISO_TREE/isolinux/isolinux.cfg" /isolinux/isolinux.cfg \
   -map "$ISO_TREE/.disk/info" /.disk/info \
   -padding 0
 
