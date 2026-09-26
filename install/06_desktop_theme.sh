@@ -36,6 +36,45 @@ if [ "${#favorites[@]}" -gt 0 ]; then
   log "Favorites: ${favorites[*]}"
 fi
 
+log "Installing AI agent launchers and the 'Agents' menu section..."
+sudo mkdir -p /usr/local/share/applications /usr/share/desktop-directories \
+              /etc/xdg/menus/applications-merged \
+              /usr/local/share/icons/hicolor/scalable/apps \
+              /usr/local/bin
+sudo install -m 755 "$REPO_ROOT/bin/zorin-ai-agent" /usr/local/bin/zorin-ai-agent
+for f in "$REPO_ROOT"/configs/applications/*.desktop; do
+  [ -f "$f" ] && sudo install -m 644 "$f" /usr/local/share/applications/
+done
+sudo install -m 644 "$REPO_ROOT/configs/applications/zorin-ai-agents.directory" \
+  /usr/share/desktop-directories/
+sudo install -m 644 "$REPO_ROOT/configs/xdg/zorin-ai-agents.menu" \
+  /etc/xdg/menus/applications-merged/
+for i in "$REPO_ROOT"/assets/icons/zorin-ai-*.svg; do
+  [ -f "$i" ] && sudo install -m 644 "$i" /usr/local/share/icons/hicolor/scalable/apps/
+done
+sudo update-desktop-database >/dev/null 2>&1 || true
+sudo gtk-update-icon-cache -q -t -f /usr/local/share/icons/hicolor 2>/dev/null || true
+log "OK: Agents section — Codex, Claude Code, OpenCode, Grok (install-on-first-use)"
+
+# GNOME app-grid folder so 'Agents' also exists in the All Apps grid.
+AF="org.gnome.desktop.app-folders"
+if as_user gsettings list-schemas 2>/dev/null | grep -q "^${AF}$"; then
+  cur="$(as_user gsettings get $AF folder-children 2>/dev/null || echo '@as []')"
+  case "$cur" in
+    *zorin-ai-agents.folder*) : ;;
+    '@as []'|'[]')
+      as_user gsettings set $AF folder-children "['zorin-ai-agents.folder']" || warn "app-folders set failed" ;;
+    *)
+      as_user gsettings set $AF folder-children "${cur%]}, 'zorin-ai-agents.folder']" \
+        || warn "app-folders append failed" ;;
+  esac
+  as_user gsettings set "$AF.folder:/org/gnome/Desktop/folders/zorin-ai-agents.folder/" name "Agents" \
+    || warn "app-folder name failed"
+  as_user gsettings set "$AF.folder:/org/gnome/Desktop/folders/zorin-ai-agents.folder/" \
+    categories "['X-ZorinAI-Agents']" || warn "app-folder categories failed"
+  log "OK: 'Agents' folder registered in the app grid"
+fi
+
 log "Applying polygonal wallpaper set..."
 WALLPAPER_DIR="/usr/local/share/backgrounds/zorin-ai"
 sudo mkdir -p "$WALLPAPER_DIR"

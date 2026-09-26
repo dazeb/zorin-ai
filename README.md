@@ -15,6 +15,7 @@ curl -fsSL https://raw.githubusercontent.com/dazeb/zorin-ai/main/boot.sh | bash
 | Area | Software |
 |------|----------|
 | Local AI | [Ollama](https://ollama.com) on `127.0.0.1:11434` + `qwen2.5-coder:7b` and the `nomic-embed-text` embedding model, wired into everything below |
+| Agents menu | Start-menu **Agents** section — Codex, Claude Code, OpenCode, Grok — with branded icons and install-on-first-use launchers |
 | Editor | [VSCodium](https://vscodium.com) with Continue.dev, GitLens, Prettier, Python, Go extensions |
 | Chat GUI | [Chatbox](https://chatboxai.app) desktop client (official `.deb`) |
 | Task manager | Mission Center (Flathub) — Windows-Task-Manager-style |
