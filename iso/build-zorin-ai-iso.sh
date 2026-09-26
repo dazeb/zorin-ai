@@ -25,6 +25,12 @@
 #
 # Build-time knobs (env):
 #   ZORIN_AI_UNATTENDED  1 = boot straight into the unattended install (default 0)
+#   ZORIN_AI_AUTOLOGIN   1 = auto-login the created user at first boot so the
+#                        provisioner runs with zero interaction (default: 1
+#                        when ZORIN_AI_UNATTENDED=1, else 0). This also bypasses
+#                        a known issue on this image: the GDM *greeter* session
+#                        fails to start (gnome-session can't resolve its
+#                        components); user sessions work fine.
 #   ZORIN_AI_USER        account to create            (default zorin)
 #   ZORIN_AI_FULLNAME    GECOS full name              (default "Zorin-AI User")
 #   ZORIN_AI_HOSTNAME    installed hostname           (default zorin-ai)
@@ -43,6 +49,7 @@ REPO="${REPO_URL:-https://github.com/dazeb/zorin-ai.git}"
 WORK_BASE="${WORK_BASE:-/var/tmp}"
 
 UNATTENDED="${ZORIN_AI_UNATTENDED:-0}"
+AUTOLOGIN="${ZORIN_AI_AUTOLOGIN:-$UNATTENDED}"
 AI_USER="${ZORIN_AI_USER:-zorin}"
 AI_FULLNAME="${ZORIN_AI_FULLNAME:-Zorin-AI User}"
 AI_HOSTNAME="${ZORIN_AI_HOSTNAME:-zorin-ai}"
@@ -143,6 +150,23 @@ Categories=System;
 X-GNOME-Autostart-enabled=true
 NoDisplay=false
 EOF
+
+if [ "$AUTOLOGIN" = 1 ]; then
+  mkdir -p "$SQ_ROOT/etc/gdm3"
+  cat > "$SQ_ROOT/etc/gdm3/custom.conf" <<EOF
+[daemon]
+AutomaticLoginEnable=True
+AutomaticLogin=$AI_USER
+
+[security]
+
+[xdmcp]
+
+[chooser]
+
+[debug]
+EOF
+fi
 
 # --- unattended preseed: bake the seed, add the boot entries ---------------
 step "4/7 generating unattended preseed seed"
