@@ -6,6 +6,8 @@ source "$REPO_ROOT/install/lib.sh"
 log "Syncing defaults into /etc/skel (applies to every user created from now on)..."
 sudo mkdir -p \
   /etc/skel/.config/mise \
+  /etc/skel/.config/copyq \
+  /etc/skel/.config/autostart \
   /etc/skel/.continue \
   /etc/skel/.local/share/nautilus/scripts
 
@@ -13,6 +15,10 @@ sudo install -m 644 "$REPO_ROOT/configs/mise/config.toml" \
   /etc/skel/.config/mise/config.toml
 sudo install -m 644 "$REPO_ROOT/configs/vscodium/continue_config.yaml" \
   /etc/skel/.continue/config.yaml
+sudo install -m 644 "$REPO_ROOT/configs/copyq/copyq.conf" \
+  /etc/skel/.config/copyq/copyq.conf
+sudo install -m 644 "$REPO_ROOT/configs/autostart/copyq.desktop" \
+  /etc/skel/.config/autostart/copyq.desktop
 for src in "$REPO_ROOT/configs/nautilus-scripts/"*; do
   [ -f "$src" ] || continue
   sudo install -m 755 "$src" "/etc/skel/.local/share/nautilus/scripts/$(basename "$src")"

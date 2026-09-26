@@ -88,5 +88,30 @@ else
 fi
 log "Chatbox first-run hint: its wizard auto-detects the local Ollama on localhost:11434."
 
+# ---- Permanent clipboard history (CopyQ) ----------------------------------------
+# omarchy-style clipboard manager: tray-resident, history persisted to disk,
+# searchable, images supported. Autostarts with the desktop session.
+if dpkg-query -W -f='${Status}' copyq 2>/dev/null | grep -q 'install ok installed'; then
+  log "OK: CopyQ already installed"
+else
+  log "Installing CopyQ (permanent clipboard history)..."
+  apt_install copyq || warn "CopyQ install failed"
+fi
+if have copyq; then
+  as_user mkdir -p "$TARGET_HOME/.config/copyq" "$TARGET_HOME/.config/autostart"
+  if as_user test -f "$TARGET_HOME/.config/copyq/copyq.conf"; then
+    log "OK: CopyQ config already present"
+  else
+    sudo install -o "$TARGET_USER" -g "$(id -gn "$TARGET_USER")" -m 644 \
+      "$REPO_ROOT/configs/copyq/copyq.conf" \
+      "$TARGET_HOME/.config/copyq/copyq.conf"
+    log "OK: CopyQ preseeded (1000-entry permanent history, silent)"
+  fi
+  sudo install -m 644 "$REPO_ROOT/configs/autostart/copyq.desktop" \
+    "$TARGET_HOME/.config/autostart/copyq.desktop"
+  sudo chown "$TARGET_USER:$(id -gn "$TARGET_USER")" \
+    "$TARGET_HOME/.config/autostart/copyq.desktop"
+fi
+
 sudo update-desktop-database >/dev/null 2>&1 || true
 log "GUI applications complete."

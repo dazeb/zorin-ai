@@ -45,6 +45,8 @@ bin/
 configs/
   mise/config.toml          node=lts, python=3.12, go=latest
   vscodium/                 settings.json, extensions.list, continue_config.yaml
+  copyq/copyq.conf          clipboard history preseed (1000 entries, silent, tray)
+  autostart/copyq.desktop   CopyQ session autostart (user + /etc/skel)
   applications/             agent + Local-LLM .desktop launchers, .directory files
   xdg/                      gnome-applications.menu (AI-first tree), agents merge
   nautilus-scripts/         Open_in_VSCodium, Ask_AI_to_Explain, Open_Terminal_Here

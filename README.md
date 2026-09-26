@@ -32,6 +32,7 @@ Prefer to review first: `git clone https://github.com/dazeb/zorin-ai && cd zorin
 | Task manager | Mission Center (Flathub) — Windows-Task-Manager-style, CPU/RAM/GPU |
 | Runtimes | [mise](https://mise.jdx.dev) managing Node LTS, Python 3.12, Go — system-wide, for every user |
 | Mouse ergonomics | Nautilus right-click: *Open in VSCodium*, *Ask AI to Explain* (sends the file to local Ollama, answers in a dialog), *Open Terminal Here* |
+| Clipboard | [CopyQ](https://hluk.github.io/CopyQ/) permanent clipboard history — tray-resident, survives reboots, searchable, image support, 1000 entries |
 | Desktop | ZorinAI-Dark shell theme, AI-first start menu, white menu icons, neon polygonal 4K wallpapers, dark mode, Windows-style window buttons, pinned taskbar |
 | Maintenance | `zom` CLI + `zom-menu` GUI panel |
 | Persistence | New user accounts inherit the whole setup via `/etc/skel` |

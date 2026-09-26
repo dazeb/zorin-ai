@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Clipboard History (CopyQ)
+Comment=Permanent clipboard history — runs in the tray
+Exec=copyq
+Icon=copyq
+Terminal=false
+Categories=Utility;
+X-GNOME-Autostart-enabled=true
+NoDisplay=true
