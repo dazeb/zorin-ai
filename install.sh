@@ -57,11 +57,12 @@ else
 fi
 
 if [ "$SKIP_GUI" -eq 1 ]; then
-  log "SKIP 04/05/06 (--skip-gui)"
+  log "SKIP 04/05/06/08 (--skip-gui)"
 else
   run_module 04_gui_apps.sh
   run_module 05_mouse_ergonomics.sh
   run_module 06_desktop_theme.sh
+  run_module 08_shell_theme.sh
 fi
 
 run_module 07_persistence.sh

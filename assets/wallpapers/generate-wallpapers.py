@@ -198,43 +198,43 @@ def finish(img, vignette=0.12, grain=0.006):
 # ------------------------------------------------------------------- scenes
 def scene_sunset_peaks(w, h, seed):
     rng = np.random.default_rng(seed)
-    img = sky_gradient(w, h, [(0.0, hex_rgb("1a0b2e")), (0.38, hex_rgb("7a1f6b")),
-                              (0.62, hex_rgb("e0447c")), (0.80, hex_rgb("ff7847")),
-                              (1.0, hex_rgb("ffc247"))])
+    img = sky_gradient(w, h, [(0.0, hex_rgb("0d001a")), (0.36, hex_rgb("3d0a5c")),
+                              (0.60, hex_rgb("7a1fff")), (0.80, hex_rgb("ff2d95")),
+                              (1.0, hex_rgb("ff5fd2"))])
     img = draw_sun(img, w * 0.62, h * 0.60, int(h * 0.13),
-                   hex_rgb("ffd166"), glow_color=hex_rgb("ff9a3d"))
-    horizon = hex_rgb("ffc247")
+                   hex_rgb("ffb3e6"), glow_color=hex_rgb("ff2d95"))
+    horizon = hex_rgb("ff5fd2")
     facet_layer(img, rng, base_y=0.74, amp=0.16, cols=COLS,
                 elev_stops=shift_palette(
-                    [(0.0, hex_rgb("3a1650")), (0.55, hex_rgb("6b2585")),
-                     (1.0, hex_rgb("c94b8e"))], horizon, 0.45))
+                    [(0.0, hex_rgb("2a0a3f")), (0.55, hex_rgb("6b1fc9")),
+                     (1.0, hex_rgb("ff2d95"))], horizon, 0.40))
     facet_layer(img, rng, base_y=0.86, amp=0.20, cols=COLS,
                 elev_stops=shift_palette(
-                    [(0.0, hex_rgb("1c0b2c")), (0.55, hex_rgb("471a63")),
-                     (0.85, hex_rgb("8a2f7a")), (1.0, hex_rgb("e866a8"))],
-                    horizon, 0.18))
+                    [(0.0, hex_rgb("0a0014")), (0.55, hex_rgb("3d0a5c")),
+                     (0.85, hex_rgb("a124ff")), (1.0, hex_rgb("ff5fd2"))],
+                    horizon, 0.15))
     facet_layer(img, rng, base_y=1.04, amp=0.24, cols=COLS,
-                elev_stops=[(0.0, hex_rgb("0d0518")), (0.5, hex_rgb("2a1040")),
-                            (0.8, hex_rgb("5c1f66")), (1.0, hex_rgb("b8427f"))])
+                elev_stops=[(0.0, hex_rgb("05000a")), (0.5, hex_rgb("1f0530")),
+                            (0.8, hex_rgb("7a1fff")), (1.0, hex_rgb("ff2d95"))])
     return finish(img)
 
 
 def scene_neon_rift(w, h, seed):
     rng = np.random.default_rng(seed)
-    img = sky_gradient(w, h, [(0.0, hex_rgb("050514")), (0.42, hex_rgb("12123f")),
-                              (0.66, hex_rgb("2a1a6e")), (0.85, hex_rgb("6a1e8f")),
-                              (1.0, hex_rgb("b8298f"))])
+    img = sky_gradient(w, h, [(0.0, hex_rgb("02010f")), (0.42, hex_rgb("14042e")),
+                              (0.66, hex_rgb("3d0a5c")), (0.85, hex_rgb("8a1fff")),
+                              (1.0, hex_rgb("ff2d95"))])
     img = draw_stars(img, rng, density=90, max_y=0.5)
     img = draw_sun(img, w * 0.30, h * 0.58, int(h * 0.10),
-                   hex_rgb("ff3d81"), glow_color=hex_rgb("b8298f"))
-    cyan = hex_rgb("00e5ff")
+                   hex_rgb("ff2d95"), glow_color=hex_rgb("a124ff"))
+    green = hex_rgb("39ff88")
     facet_layer(img, rng, base_y=0.72, amp=0.15, cols=COLS,
                 elev_stops=shift_palette(
-                    [(0.0, hex_rgb("0a1030")), (0.6, hex_rgb("182a66")),
-                     (1.0, hex_rgb("2f6bb0"))], cyan, 0.35))
+                    [(0.0, hex_rgb("0a0218")), (0.6, hex_rgb("3d0a5c")),
+                     (1.0, hex_rgb("a124ff"))], green, 0.30))
     facet_layer(img, rng, base_y=0.90, amp=0.22, cols=COLS,
-                elev_stops=[(0.0, hex_rgb("040614")), (0.5, hex_rgb("0d1440")),
-                            (0.85, hex_rgb("1c2f80")), (1.0, hex_rgb("3fd6ff"))])
+                elev_stops=[(0.0, hex_rgb("04010a")), (0.5, hex_rgb("1f0530")),
+                            (0.85, hex_rgb("7a1fff")), (1.0, hex_rgb("39ff88"))])
     return finish(img)
 
 
@@ -261,35 +261,35 @@ def scene_aurora_peaks(w, h, seed):
 
 def scene_crimson_dunes(w, h, seed):
     rng = np.random.default_rng(seed)
-    img = sky_gradient(w, h, [(0.0, hex_rgb("14060a")), (0.45, hex_rgb("4a0e1e")),
-                              (0.70, hex_rgb("8f1626")), (0.88, hex_rgb("e03a2f")),
-                              (1.0, hex_rgb("ff7a33"))])
+    img = sky_gradient(w, h, [(0.0, hex_rgb("0f0018")), (0.45, hex_rgb("4a0a3c")),
+                              (0.70, hex_rgb("c02472")), (0.88, hex_rgb("ff2d95")),
+                              (1.0, hex_rgb("ff7ae0"))])
     img = draw_sun(img, w * 0.72, h * 0.66, int(h * 0.09),
-                   hex_rgb("ffe8d6"), glow_color=hex_rgb("ff7a33"))
+                   hex_rgb("ffffff"), glow_color=hex_rgb("ff2d95"))
     facet_layer(img, rng, base_y=0.80, amp=0.10, cols=COLS, light_k=0.35,
                 elev_stops=shift_palette(
-                    [(0.0, hex_rgb("5c1020")), (1.0, hex_rgb("a8322f"))],
-                    hex_rgb("ff7a33"), 0.35))
+                    [(0.0, hex_rgb("3d0a3c")), (1.0, hex_rgb("c02472"))],
+                    hex_rgb("ff2d95"), 0.35))
     facet_layer(img, rng, base_y=0.98, amp=0.16, cols=COLS, light_k=0.35,
-                elev_stops=[(0.0, hex_rgb("1c0508")), (0.6, hex_rgb("4a0f18")),
-                            (1.0, hex_rgb("8f2020"))])
+                elev_stops=[(0.0, hex_rgb("0a0014")), (0.6, hex_rgb("2a0a3f")),
+                            (1.0, hex_rgb("a1246e"))])
     return finish(img, vignette=0.14)
 
 
 def scene_glacier_facet(w, h, seed):
     rng = np.random.default_rng(seed)
-    img = sky_gradient(w, h, [(0.0, hex_rgb("072733")), (0.45, hex_rgb("0e4a5c")),
-                              (0.75, hex_rgb("1a7a8c")), (1.0, hex_rgb("3dbdc9"))])
+    img = sky_gradient(w, h, [(0.0, hex_rgb("0a0118")), (0.45, hex_rgb("2a0a4a")),
+                              (0.75, hex_rgb("5c1fa8")), (1.0, hex_rgb("9a4bff"))])
     img = draw_sun(img, w * 0.40, h * 0.34, int(h * 0.08),
-                   hex_rgb("eafcff"), glow_color=hex_rgb("7adfe8"))
-    ice = hex_rgb("eafcff")
+                   hex_rgb("f2eaff"), glow_color=hex_rgb("a24bff"))
+    ice = hex_rgb("e8d9ff")
     facet_layer(img, rng, base_y=0.74, amp=0.14, cols=COLS,
                 elev_stops=shift_palette(
-                    [(0.0, hex_rgb("0a3a48")), (0.6, hex_rgb("16606e")),
-                     (1.0, hex_rgb("3fa5ad"))], ice, 0.25))
+                    [(0.0, hex_rgb("1a0530")), (0.6, hex_rgb("4a1a8c")),
+                     (1.0, hex_rgb("a24bff"))], ice, 0.25))
     facet_layer(img, rng, base_y=0.96, amp=0.20, cols=COLS,
-                elev_stops=[(0.0, hex_rgb("04202b")), (0.5, hex_rgb("0a4754")),
-                            (0.85, hex_rgb("187a86")), (1.0, hex_rgb("c9f4f7"))])
+                elev_stops=[(0.0, hex_rgb("08010f")), (0.5, hex_rgb("2a0a4a")),
+                            (0.85, hex_rgb("7a3ff2")), (1.0, hex_rgb("e8d9ff"))])
     return finish(img)
 
 
