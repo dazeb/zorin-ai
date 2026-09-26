@@ -56,6 +56,17 @@ sudo update-desktop-database >/dev/null 2>&1 || true
 sudo gtk-update-icon-cache -q -t -f /usr/local/share/icons/hicolor 2>/dev/null || true
 log "OK: Agents section — Codex, Claude Code, OpenCode, Grok (install-on-first-use)"
 
+log "Installing AI-first application menu (replaces stock category tree)..."
+sudo install -m 644 "$REPO_ROOT/configs/applications/zorin-ai-local-llm.directory" \
+  /usr/share/desktop-directories/
+if [ -f /etc/xdg/menus/gnome-applications.menu ] \
+   && [ ! -f /etc/xdg/menus/gnome-applications.menu.orig ]; then
+  sudo cp /etc/xdg/menus/gnome-applications.menu /etc/xdg/menus/gnome-applications.menu.orig
+fi
+sudo install -m 644 "$REPO_ROOT/configs/xdg/gnome-applications.menu" \
+  /etc/xdg/menus/gnome-applications.menu
+log "OK: menu sections — Agents, Local LLM, Development, Internet, Media, Utilities, System"
+
 # GNOME app-grid folder so 'Agents' also exists in the All Apps grid.
 AF="org.gnome.desktop.app-folders"
 if as_user gsettings list-schemas 2>/dev/null | grep -q "^${AF}$"; then

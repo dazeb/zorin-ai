@@ -1,0 +1,109 @@
+<!DOCTYPE Menu PUBLIC "-//freedesktop//DTD Menu 1.0//EN"
+ "http://www.freedesktop.org/standards/menu-spec/1.0/menu.dtd">
+
+<Menu>
+
+  <Name>Applications</Name>
+  <Directory>X-GNOME-Menu-Applications.directory</Directory>
+
+  <!-- zorin-ai: AI-first application menu.
+       Replaces the stock GNOME category tree (Accessories/Graphics/Office/…)
+       with sections for an AI-agent workstation. The original file is kept
+       alongside as gnome-applications.menu.orig by the provisioner. -->
+
+  <!-- Read standard .directory and .desktop file locations -->
+  <DefaultAppDirs/>
+  <DefaultDirectoryDirs/>
+
+  <!-- Read in overrides and child menus from applications-merged/ -->
+  <DefaultMergeDirs/>
+
+  <!-- Agents submenu -->
+  <Menu>
+    <Name>Agents</Name>
+    <Directory>zorin-ai-agents.directory</Directory>
+    <Include>
+      <Category>X-ZorinAI-Agents</Category>
+    </Include>
+  </Menu>
+
+  <!-- Local LLM submenu -->
+  <Menu>
+    <Name>Local LLM</Name>
+    <Directory>zorin-ai-local-llm.directory</Directory>
+    <Include>
+      <Category>X-ZorinAI-LocalLLM</Category>
+      <Filename>xyz.chatboxapp.app.desktop</Filename>
+    </Include>
+  </Menu>
+
+  <!-- Development submenu -->
+  <Menu>
+    <Name>Development</Name>
+    <Directory>Development.directory</Directory>
+    <Include>
+      <And>
+        <Category>Development</Category>
+        <Not><Category>X-ZorinAI-Agents</Category></Not>
+        <Not><Category>X-ZorinAI-LocalLLM</Category></Not>
+      </And>
+    </Include>
+  </Menu>
+
+  <!-- Internet submenu -->
+  <Menu>
+    <Name>Internet</Name>
+    <Directory>Network.directory</Directory>
+    <Include>
+      <And>
+        <Category>Network</Category>
+        <Not><Category>X-ZorinAI-Agents</Category></Not>
+        <Not><Category>X-ZorinAI-LocalLLM</Category></Not>
+      </And>
+    </Include>
+  </Menu>
+
+  <!-- Media submenu (audio/video/graphics under one roof) -->
+  <Menu>
+    <Name>Media</Name>
+    <Directory>AudioVideo.directory</Directory>
+    <Include>
+      <Or>
+        <Category>AudioVideo</Category>
+        <Category>Graphics</Category>
+      </Or>
+    </Include>
+  </Menu>
+
+  <!-- Utilities submenu -->
+  <Menu>
+    <Name>Utilities</Name>
+    <Directory>Utility.directory</Directory>
+    <Include>
+      <Or>
+        <And>
+          <Category>Utility</Category>
+          <Not><Category>System</Category></Not>
+          <Not><Category>Accessibility</Category></Not>
+          <Not><Category>X-ZorinAI-Agents</Category></Not>
+          <Not><Category>X-ZorinAI-LocalLLM</Category></Not>
+        </And>
+        <Category>FileManager</Category>
+      </Or>
+    </Include>
+  </Menu>
+
+  <!-- System submenu -->
+  <Menu>
+    <Name>System</Name>
+    <Directory>System.directory</Directory>
+    <Include>
+      <And>
+        <Category>System</Category>
+        <Not><Category>X-ZorinAI-Agents</Category></Not>
+        <Not><Category>X-ZorinAI-LocalLLM</Category></Not>
+      </And>
+    </Include>
+  </Menu>
+
+</Menu>

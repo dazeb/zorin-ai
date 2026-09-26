@@ -221,7 +221,11 @@ Each module: **objective → actions → idempotence guard → acceptance check.
   zenity consent prompt, via mise-managed node), an XDG menu merge adding the
   "Agents" category (`configs/xdg/zorin-ai-agents.menu`), and a GNOME app-grid
   "Agents" folder via the relocatable `org.gnome.desktop.app-folders.folder`
-  schema.
+  schema. The stock category tree itself is replaced by an AI-first
+  `/etc/xdg/menus/gnome-applications.menu` (original preserved as
+  `.menu.orig`): sections are **Agents, Local LLM** (Chatbox + "AI Models"
+  model-manager + "AI Health Check" launchers), **Development, Internet,
+  Media, Utilities, System** — needs one re-login (session rescan) to apply.
 - **Guard:** every `gsettings` step is `warn`-not-`die` — theme/favorites must never
   abort an otherwise complete install.
 - **Accept:** window controls on the right, dark mode, taskbar shows the pinned apps.
