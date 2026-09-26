@@ -20,7 +20,7 @@ curl -fsSL https://raw.githubusercontent.com/dazeb/zorin-ai/main/boot.sh | bash
 | Task manager | Mission Center (Flathub) — Windows-Task-Manager-style |
 | Runtimes | [mise](https://mise.jdx.dev) managing Node LTS, Python 3.12, Go system-wide |
 | Mouse ergonomics | Nautilus right-click: *Open in VSCodium*, *Ask AI to Explain*, *Open Terminal Here* |
-| Desktop | Windows/KDE-style window buttons, dark mode, pinned taskbar favorites, desktop icons |
+| Desktop | Windows/KDE-style window buttons, dark mode, pinned taskbar favorites, desktop icons, omarchy-style procedural wallpaper set (`zom bg next` cycles it) |
 | Maintenance | `zom` CLI + `zom-menu` GUI panel (`update`, `doctor`, `models`) |
 | Persistence | `/etc/skel` defaults for every new user |
 
@@ -45,6 +45,7 @@ and design deviations from the source spec.
 zom update        # apt + flatpak + mise runtimes + AI models
 zom doctor        # health check (Ollama, mise, VSCodium, GPU, disk)
 zom models gui    # pick & download models from a GUI list
+zom bg next       # cycle the omarchy-style wallpaper set
 zom-menu          # the same things, mouse-driven
 ```
 

@@ -36,6 +36,26 @@ if [ "${#favorites[@]}" -gt 0 ]; then
   log "Favorites: ${favorites[*]}"
 fi
 
+log "Applying omarchy-style wallpaper set..."
+WALLPAPER_DIR="/usr/local/share/backgrounds/zorin-ai"
+sudo mkdir -p "$WALLPAPER_DIR"
+for wp in "$REPO_ROOT"/assets/wallpapers/*.jpg; do
+  [ -f "$wp" ] || continue
+  sudo install -m 644 "$wp" "$WALLPAPER_DIR/$(basename "$wp")"
+done
+# Default: the moonlit ridge scene, for light and dark modes plus lock screen.
+DEFAULT_WP="$WALLPAPER_DIR/zorin-ai-midnight-ridges-2160p.jpg"
+if [ -f "$DEFAULT_WP" ]; then
+  gs org.gnome.desktop.background picture-uri "file://$DEFAULT_WP"
+  gs org.gnome.desktop.background picture-uri-dark "file://$DEFAULT_WP"
+  gs org.gnome.desktop.background picture-options 'zoom'
+  gs org.gnome.desktop.screensaver picture-uri "file://$WALLPAPER_DIR/zorin-ai-ember-minimal-2160p.jpg"
+  log "Wallpaper set (cycle with: zom bg next)"
+fi
+
+log "Setting accent color (omarchy-style muted blue)..."
+gs org.gnome.desktop.interface accent-color 'teal'
+
 if as_user gsettings list-schemas 2>/dev/null | grep -q '^org\.gnome\.shell\.extensions\.ding$'; then
   log "Ensuring desktop icons (DING) show Home and Trash..."
   gs org.gnome.shell.extensions.ding show-home true

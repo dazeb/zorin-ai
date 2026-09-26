@@ -205,9 +205,13 @@ Each module: **objective → actions → idempotence guard → acceptance check.
 ### 06_desktop_theme
 - **Actions** (all via `as_user` against the live session bus): window buttons
   `:minimize,maximize,close` (right side); `color-scheme prefer-dark` +
-  `gtk-theme ZorinBlue-Dark`; pin favorites filtered to desktop entries that actually
-  exist (`zorin-menu`, Nautilus, codium, Chatbox, Mission Center, Terminal); enable
-  DING desktop-icons keys (`show-home`, `show-trash`) when the schema exists.
+  `gtk-theme ZorinBlue-Dark`; omarchy-style wallpaper set (procedurally generated
+  4K scenes in `assets/wallpapers/`, installed to
+  `/usr/local/share/backgrounds/zorin-ai/`, default + lock-screen set via
+  `picture-uri[-dark]`; cycle with `zom bg next`); accent color attempted via
+  `org.gnome.desktop.interface accent-color` (warn-not-die — key absent on some
+  Zorin builds); pin favorites filtered to desktop entries that actually exist;
+  enable DING desktop-icons keys (`show-home`, `show-trash`) when the schema exists.
 - **Guard:** every `gsettings` step is `warn`-not-`die` — theme/favorites must never
   abort an otherwise complete install.
 - **Accept:** window controls on the right, dark mode, taskbar shows the pinned apps.
